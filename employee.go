@@ -9,6 +9,8 @@ const (
 	AMS9
 	AMS10
 	AMS11
+	AMS17
+	AMS19
 )
 
 var office = [...]string{
@@ -23,6 +25,27 @@ var office = [...]string{
 func (o Office) String() string {
 	return office[o]
 }
+
+var officeToGroup = map[Office]OfficeGroup{
+	AMS3:  Vijzelstraat,
+	AMS9:  Rembrandtplein,
+	AMS10: Rembrandtplein,
+	AMS11: Vijzelstraat,
+	AMS17: PietHeinkade,
+	AMS19: PietHeinkade,
+}
+
+func (o Office) GetGroup() OfficeGroup {
+	return officeToGroup[o]
+}
+
+type OfficeGroup int
+
+const (
+	Rembrandtplein OfficeGroup = iota + 1
+	Vijzelstraat
+	PietHeinkade
+)
 
 type Frequency int
 
@@ -41,7 +64,7 @@ type Employee struct {
 	Availability      []time.Weekday
 	Frequency         Frequency
 	PreferredLocation string // Should be group of the offices
-	Oldie            bool
+	Oldie             bool
 }
 
 func (e *Employee) wasMatchedToday() bool {

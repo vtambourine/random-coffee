@@ -32,7 +32,8 @@ func main() {
 
 	log.Printf("started at %s\n", addr)
 
-	roster := make(EmployeeRoster)
+	//roster := make(EmployeeRoster)
+	roster := NewRoster()
 
 	offices := []Office{AMS9, AMS10, AMS11}
 	names := []string{
@@ -55,7 +56,8 @@ func main() {
 			//Frequency: frequencies[rand.Intn(len(frequencies))],
 			PreferredLocation: preferredLocations[rand.Intn(len(preferredLocations))],
 		}
-		roster[e.ID] = e
+		//roster[e.ID] = e
+		roster.Add(e)
 
 		fmt.Printf("%v\n", (*e).Name)
 	}
@@ -96,21 +98,32 @@ func main() {
 		//	fmt.Println("Done!")
 		//	return
 		case <-ticker.C:
-			match(&roster)
+			//match(&roster)
+			roster.GetMatches()
 		}
 	}
 }
 
-func processMessage(m Messaging, messenger *Messenger, employees EmployeeRoster) {
+func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 	senderID := m.Sender.ID
 
-	employee, ok := employees[senderID]
+	//employee, ok := employees[senderID]
+	//if !ok {
+	//	employee = &Employee{
+	//		ID:   senderID,
+	//		Name: "New Name",
+	//	}
+	//	employees[senderID] = employee
+	//}
+
+	employee, ok := roster.GetByID(senderID)
 	if !ok {
 		employee = &Employee{
 			ID:   senderID,
 			Name: "New Name",
 		}
-		employees[senderID] = employee
+		//employees[senderID] = employee
+		roster.Add(employee)
 	}
 
 	log.Printf("recieved message from: %s", senderID)

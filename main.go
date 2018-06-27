@@ -45,9 +45,9 @@ func main() {
 	preferredLocations := []string{"AMS3:AMS11", "AMS9:AMS10", "AMS17:AMS19"}
 	//frequencies := []Frequency{Weekly, Biweekly, Triweekly}
 
-	var e Employee
+	var e *Employee
 	for i := 0; i <= 20; i++ {
-		e = Employee{
+		e = &Employee{
 			ID:     string(i),
 			Name:   names[rand.Intn(len(names))],
 			Office: offices[rand.Intn(len(offices))],
@@ -55,9 +55,9 @@ func main() {
 			//Frequency: frequencies[rand.Intn(len(frequencies))],
 			PreferredLocation: preferredLocations[rand.Intn(len(preferredLocations))],
 		}
-		roster[e.ID] = &e
+		roster[e.ID] = e
 
-		//fmt.Printf("%v\n", e)
+		fmt.Printf("%v\n", (*e).Name)
 	}
 
 	go func() {

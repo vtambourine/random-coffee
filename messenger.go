@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
-)
+	)
 
 const (
 	markSeen  = "mark_seen"
@@ -180,9 +179,9 @@ func (m *Messenger) Send(message Messaging) {
 
 	client := &http.Client{}
 
-	go func() {
+	//go func() {
 		// Make Send syncronous, but run request handler in goroutine
-		time.Sleep(800 * time.Millisecond)
+		//time.Sleep(800 * time.Millisecond)
 		resp, err := client.Do(req)
 		defer resp.Body.Close()
 		//log.Printf("Request:\n%#v\n\n", req.Body)
@@ -193,5 +192,5 @@ func (m *Messenger) Send(message Messaging) {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}()
+	//}()
 }

@@ -41,6 +41,7 @@ type Employee struct {
 	Availability      []time.Weekday
 	Frequency         Frequency
 	PreferredLocation string // Should be group of the offices
+	Oldie            bool
 }
 
 func (e *Employee) wasMatchedToday() bool {
@@ -86,3 +87,19 @@ type Match struct {
 	Reviewed  bool
 	Rating    [2]Rating
 }
+
+//type EmployeeRoster struct {
+//	roster map[string]*Employee
+//}
+//
+//func NewEmployeeRoster() *EmployeeRoster {
+//	return &EmployeeRoster{
+//		roster: make(map[string]*Employee),
+//	}
+//}
+//
+//func (er *EmployeeRoster) Add(employee *Employee) {
+//	if _, ok := er.roster[employee.ID]; !ok {
+//		er.roster[employee.ID] = employee
+//	}
+//}

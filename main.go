@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"time"
+	"strings"
 )
 
 func reply(m Messaging, msngr *Messenger) {
@@ -16,20 +17,35 @@ func reply(m Messaging, msngr *Messenger) {
 func main() {
 	log.Println("Random Coffee initialized")
 
-	addr := "localhost:3031"
-	msngr := NewMessenger("EAAGUCR82yskBAEuLKH3iufeRtiSV8vSZBOp0EmZBcUbtkNoJxyt2vOjqT87ZChQaAdHzRgSntGaZAnTMgtbNIBc7BDggF3zRlZB3NS50U8v0xA8krYdFi8TSllZA0geZCr2iSuS4FrbnhmP6dtZBnfF5LTc9YnWIb46GL5jAsp5ZAzwZDZD", os.Getenv("VERIFY_TOKEN"))
+	log.Println("Random Coffee initialized")
+
+	accessToken := os.Getenv("PAGE_ACCESS_TOKEN")
+	verifyToken := os.Getenv("VERIFY_TOKEN")
+
+	if accessToken == "" {
+		panic("no PAGE_ACCESS_TOKEN environment variable")
+	}
+	if verifyToken == "" {
+		panic("no VERIFY_TOKEN environment variable")
+	}
+
+	addr := "127.0.0.1:3001"
+	msngr := NewMessenger(accessToken, verifyToken)
 	go msngr.Start(addr)
 	log.Printf("started at %s\n", addr)
 
 	employees := make(map[string]*Employee)
 	var sender string
 
+	//employeesChans := make(map[string]chan struct{})
+
 	for {
 		select {
 		case m := <-msngr.C:
 			sender = m.Sender.ID
+
 			log.Printf("recieved message from: %s", sender)
-			//
+
 			//if e, ok := employees[sender]; ok {
 			//	log.Printf("found by %s, %s", sender, e.Name)
 			//} else {
@@ -43,18 +59,24 @@ func main() {
 
 			//continue
 
+			// If postback is not empty, the message is one of the quick reply responses
 			if m.Postback != nil {
 				log.Printf("Got postback: %#v", m.Postback)
+
 				employee, ok := employees[sender]
 				if !ok {
 					continue
 				}
 
+				//employeeChans, _ := employeesChans[sender]
+
 				switch m.Postback.Payload {
 				case "weekely":
 					employee.Frequency = Weekly
+
 				case "biweekely":
 					employee.Frequency = Biweekly
+
 				}
 
 				msngr.Send(Messaging{
@@ -69,15 +91,39 @@ func main() {
 				continue
 			}
 
+			// Handle Office selection
+			if qr := m.Message.QuickReply; qr != nil {
+
+				employee, ok := employees[sender]
+				if !ok {
+					continue
+				}
+
+				switch qr.Payload {
+				case "AMS9:AMS10":
+					fallthrough
+				case "AMS3:AMS11":
+					fallthrough
+				case "AMS17:AMS19":
+					for _, o := range strings.Split(qr.Payload, ":") {
+						log.Printf("employee %#v wants to meet at %s", employee, o)
+					}
+					employee.PreferredLocation = qr.Payload
+				}
+
+				//continue
+			}
+
+
 			if e, ok := employees[sender]; ok {
-				msngr.Send(Messaging{
-					Recipient: User{
-						ID: sender,
-					},
-					Message: &Message{
-						Text: fmt.Sprintf("Hello, %s", e.Name),
-					},
-				})
+				//msngr.Send(Messaging{
+				//	Recipient: User{
+				//		ID: sender,
+				//	},
+				//	Message: &Message{
+				//		Text: fmt.Sprintf("REPEAT GREETING"),
+				//	},
+				//})
 			} else {
 				e = &Employee{
 					Name: "John Doe",
@@ -85,43 +131,45 @@ func main() {
 
 				employees[sender] = e
 
+				log.Println("send greeting ")
 				msngr.Send(Messaging{
 					Recipient: User{
 						ID: sender,
 					},
 					Message: &Message{
-						Text: fmt.Sprintf("Hello, %s", e.Name),
+						Text: fmt.Sprintf("GREETING"),
 					},
 				})
 			}
 
-			log.Printf("%#v", employees)
-
 			employee := *employees[sender]
 
-			if employee.Frequency == 0 {
+			// Person didn't confirm location
+			log.Println(employee.PreferredLocation)
+			//time.Sleep(2 * time.Second)
+			if len(employee.PreferredLocation) == 0 {
+				log.Println("send office ")
 				msngr.Send(Messaging{
 					Recipient: User{
-						ID: m.Sender.ID,
+						ID: sender,
 					},
 					Message: &Message{
-						Attachment: &Attachment{
-							Type: "template",
-							Payload: Payload{
-								TemplateType: "button",
-								Text: "How often you want two be invited?",
-								Buttons: &[]Button {
-									{
-										Title: "Every one week",
-										Type: "postback",
-										Payload: "weekely",
-									},
-									{
-										Title: "Every two week",
-										Type: "postback",
-										Payload: "biweekely",
-									},
-								},
+						Text: "Pam Pam",
+						QuickReplies: &[]QuickReply{
+							{
+								ContentType: "text",
+								Title: "rembrandt",
+								Payload: "AMS9:AMS10",
+							},
+							{
+								ContentType: "text",
+								Title: "vijzel",
+								Payload: "AMS3:AMS11",
+							},
+							{
+								ContentType: "text",
+								Title: "piethein",
+								Payload: "AMS17:AMS19",
 							},
 						},
 					},
@@ -132,10 +180,56 @@ func main() {
 						ID: sender,
 					},
 					Message: &Message{
-						Text: fmt.Sprintf("You will be invited %n", employee.Frequency),
+						Text: fmt.Sprintf("PREFERRED LOCATION RECEIVED"),
+					},
+				})
+				msngr.Send(Messaging{
+					Recipient: User{
+						ID: sender,
+					},
+					Message: &Message{
+						Text: fmt.Sprintf("TOT ZIENS"),
 					},
 				})
 			}
+
+			//if employee.Frequency == 0 {
+			//	msngr.Send(Messaging{
+			//		Recipient: User{
+			//			ID: m.Sender.ID,
+			//		},
+			//		Message: &Message{
+			//			Attachment: &Attachment{
+			//				Type: "template",
+			//				Payload: Payload{
+			//					TemplateType: "button",
+			//					Text: "How often you want two be invited?",
+			//					Buttons: &[]Button {
+			//						{
+			//							Title: "Every one week",
+			//							Type: "postback",
+			//							Payload: "weekely",
+			//						},
+			//						{
+			//							Title: "Every two week",
+			//							Type: "postback",
+			//							Payload: "biweekely",
+			//						},
+			//					},
+			//				},
+			//			},
+			//		},
+			//	})
+			//} else {
+			//	msngr.Send(Messaging{
+			//		Recipient: User{
+			//			ID: sender,
+			//		},
+			//		Message: &Message{
+			//			Text: fmt.Sprintf("You will be invited %n", employee.Frequency),
+			//		},
+			//	})
+			//}
 		}
 	}
 

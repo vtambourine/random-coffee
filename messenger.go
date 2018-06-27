@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 )
 
 const (
@@ -14,7 +15,7 @@ const (
 	typingOff = "typing_off"
 )
 
-const apiTmpl = "https://graph.facebook.com/v2.6/me/messages?access_token=%s"
+const apiTmpl = "https://graph.facebook.com/v2.12/me/messages?access_token=%s"
 
 type Messenger struct {
 	C      chan Messaging // The channel on which the messages are delivered
@@ -48,6 +49,7 @@ type User struct {
 type Message struct {
 	MID          string        `json:"mid,omitempty"`
 	Text         string        `json:"text,omitempty"`
+	QuickReply   *QuickReply   `json:"quick_reply,omitempty"`
 	QuickReplies *[]QuickReply `json:"quick_replies,omitempty"`
 	Attachment   *Attachment   `json:"attachment,omitempty"`
 	Attachments  *[]Attachment `json:"attachments,omitempty"`
@@ -163,7 +165,7 @@ func (m *Messenger) messagesEndpoint(w http.ResponseWriter, r *http.Request) {
 
 // Start create the server and register webhooks handler
 func (m *Messenger) Start(addr string) {
-	http.HandleFunc("/webhooks", m.webhookHandler)
+	http.HandleFunc("/bot", m.webhookHandler)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
@@ -179,8 +181,15 @@ func (m *Messenger) Send(message Messaging) {
 	client := &http.Client{}
 
 	go func() {
+		// Make Send syncronous, but run request handler in goroutine
+		time.Sleep(800 * time.Millisecond)
 		resp, err := client.Do(req)
 		defer resp.Body.Close()
+		//log.Printf("Request:\n%#v\n\n", req.Body)
+		//log.Printf("Response:\n%#v\n\n", string(resp.Body))
+
+		//body, err := ioutil.ReadAll(resp.Body)
+		//fmt.Println("get:\n", string(body))
 		if err != nil {
 			log.Fatal(err)
 		}

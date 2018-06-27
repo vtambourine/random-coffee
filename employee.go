@@ -12,10 +12,12 @@ const (
 )
 
 var office = [...]string{
-	"AMS3",
-	"AMS9",
-	"AMS10",
-	"AMS11",
+	"AMS3",  // ??
+	"AMS9",  // the bank
+	"AMS10", // learning center
+	"AMS11", // spaces
+	"AMS17", // piet hein?
+	"AMS19", // ??
 }
 
 func (o Office) String() string {
@@ -32,12 +34,13 @@ const (
 )
 
 type Employee struct {
-	ID           string
-	Name         string
-	Office       Office
-	LastMatch    Match
-	Availability []time.Weekday
-	Frequency    Frequency
+	ID                string
+	Name              string
+	Office            Office
+	LastMatch         Match
+	Availability      []time.Weekday
+	Frequency         Frequency
+	PreferredLocation string // Should be group of the offices
 }
 
 func (e *Employee) wasMatchedToday() bool {

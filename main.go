@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-var offices = []Office{AMS3, AMS9, AMS10, AMS11, AMS14, AMS15, AMS16, AMS17, AMS22}
-
 func main() {
 	log.Println("Random Coffee initialized")
 
@@ -49,7 +47,6 @@ func main() {
 			ID:                fmt.Sprintf("id-%d", i),
 			Active:            true,
 			Name:              names[rand.Intn(len(names))],
-			Office:            offices[rand.Intn(len(offices))],
 			Oldie:             false,
 			PreferredLocation: preferredLocations[rand.Intn(len(preferredLocations))],
 		}

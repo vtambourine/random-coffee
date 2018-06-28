@@ -69,7 +69,7 @@ func main() {
 		for {
 			select {
 			case m := <-msngr.C:
-				go processMessage(m, msngr, roster)
+				go processMessage(m, msngr, roster, db)
 			}
 		}
 	}()
@@ -169,7 +169,7 @@ func main() {
 	}
 }
 
-func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
+func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Storage) {
 	senderID := m.Sender.ID
 
 	if t := m.Message.Text; len(t) > 0 {
@@ -223,6 +223,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 			fallthrough
 		case string(Zuid):
 			(*employee).PreferredLocation = OfficeGroup(qr.Payload)
+			db.SaveEmployee(employee)
 
 			messenger.Send(Messaging{
 				Recipient: User{

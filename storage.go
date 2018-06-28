@@ -28,7 +28,7 @@ func (s *Storage) Init(filename string) {
 	}
 }
 func (s *Storage) SaveEmployee(employee *Employee) {
-	stmt, err := s.Connection.Prepare("INSERT INTO employee (workplace_id, name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?)")
+	stmt, err := s.Connection.Prepare("INSERT OR REPLACE INTO employee (workplace_id, name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?)")
 	if err != nil {
 		log.Print(err)
 	}

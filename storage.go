@@ -76,3 +76,14 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 	}
 	return employees
 }
+
+func (s *Storage) SaveMatch(match *Match) {
+	stmt, err := s.Connection.Prepare("INSERT INTO matches (match_id_1, match_id_2, created_at) VALUES(?, ?, ?)")
+	if err != nil {
+		log.Print(err)
+	}
+	_, err = stmt.Exec(s.GetEmployeeId(match.Pair[0].ID), s.GetEmployeeId(match.Pair[1].ID), match.Time)
+	if err != nil {
+		log.Print(err)
+	}
+}

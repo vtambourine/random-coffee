@@ -58,7 +58,6 @@ const (
 	Unknown Availability = iota
 	Unavailable// Unavailable for matching this week
 	Available // Available for matching this week
-	WaitingForMatch
 	Matched // Already matched this week
 )
 

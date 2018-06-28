@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	)
+)
 
 const (
 	markSeen  = "mark_seen"
@@ -14,13 +14,14 @@ const (
 	typingOff = "typing_off"
 )
 
-const apiTmpl = "https://graph.facebook.com/v2.12/me/messages?access_token=%s"
+const apiTmpl = "https://graph.facebook.com/v2.12"
 
 type Messenger struct {
 	C      chan Messaging // The channel on which the messages are delivered
 	secret string         // Bot application key
 	token  string         // Verification token
-	url    string
+	api    string
+	stream chan struct{}
 }
 
 type Event struct {
@@ -113,7 +114,8 @@ func NewMessenger(secret, token string) *Messenger {
 		C:      c,
 		secret: secret,
 		token:  token,
-		url:    fmt.Sprintf(apiTmpl, secret),
+		api:    apiTmpl,
+		stream: make(chan struct{}, 50),
 	}
 	return m
 }
@@ -164,14 +166,15 @@ func (m *Messenger) messagesEndpoint(w http.ResponseWriter, r *http.Request) {
 
 // Start create the server and register webhooks handler
 func (m *Messenger) Start(addr string) {
-	http.HandleFunc("/bot", m.webhookHandler)
+	http.HandleFunc("/", m.webhookHandler)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
 func (m *Messenger) Send(message Messaging) {
 	body := new(bytes.Buffer)
 	json.NewEncoder(body).Encode(&message)
-	req, err := http.NewRequest(http.MethodPost, m.url, body)
+	url := fmt.Sprintf("%s/me/messages?access_token=%s", m.api, m.secret)
+	req, err := http.NewRequest(http.MethodPost, url, body)
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		log.Fatal(err)
@@ -180,17 +183,46 @@ func (m *Messenger) Send(message Messaging) {
 	client := &http.Client{}
 
 	//go func() {
-		// Make Send syncronous, but run request handler in goroutine
-		//time.Sleep(800 * time.Millisecond)
-		resp, err := client.Do(req)
-		defer resp.Body.Close()
-		//log.Printf("Request:\n%#v\n\n", req.Body)
-		//log.Printf("Response:\n%#v\n\n", string(resp.Body))
+	//	<-m.stream
 
-		//body, err := ioutil.ReadAll(resp.Body)
-		//fmt.Println("get:\n", string(body))
-		if err != nil {
-			log.Fatal(err)
-		}
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
 	//}()
+}
+
+type Member struct {
+	ID    string `json:"id,omitempty"`
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
+}
+
+func (m *Messenger) GetMember(id string) Member {
+	url := fmt.Sprintf("%s/%s?fields=name,email&access_token=%s", m.api, id, m.secret)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req.Header.Add("Content-Type", "application/json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	member := new(Member)
+	err = json.NewDecoder(resp.Body).Decode(member)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return *member
 }

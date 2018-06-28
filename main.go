@@ -27,7 +27,7 @@ func main() {
 		panic("no VERIFY_TOKEN environment variable")
 	}
 
-	addr := "127.0.0.1:3001"
+	addr := "127.0.0.1:80"
 	msngr := NewMessenger(accessToken, verifyToken)
 
 	go msngr.Start(addr)
@@ -46,7 +46,7 @@ func main() {
 	preferredLocations := []OfficeGroup{Rembrandtplein, Vijzelstraat, PietHeinkade, Sloterdijk, Zuid}
 
 	var e *Employee
-	for i := 0; i <= 2; i++ {
+	for i := 0; i <= 10; i++ {
 		e = &Employee{
 			ID:                fmt.Sprintf("id-%d", i),
 			Active:            true,
@@ -81,7 +81,6 @@ func main() {
 			case "AVA":
 				roster.SetAvailabilityAll(Unavailable)
 				for _, e := range roster.Employees {
-					log.Printf("Sending to %s\n", e.ID)
 					if e.Availability == Unavailable {
 						e.Availability = Unknown
 						go msngr.Send(Messaging{
@@ -89,7 +88,7 @@ func main() {
 								ID: e.ID,
 							},
 							Message: &Message{
-								Text: "Good morning {{NAME}}! Are you available to grab a coffee with someone today?",
+								Text: fmt.Sprintf("Good morning %s! Are you available to grab a coffee with someone today?", e.Name),
 								QuickReplies: &[]QuickReply{
 									{
 										ContentType: "text",
@@ -166,13 +165,15 @@ func main() {
 func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 	senderID := m.Sender.ID
 
-	if t := m.Message.Text; len(t) > 0 {
-		switch t {
-		case "AVA":
-			fallthrough
-		case "PAIR":
-			scheduler <- t
-			return
+	if m.Postback != nil {
+		if p := m.Postback.Payload; len(p) > 0 {
+			switch p {
+			case "AVA":
+				fallthrough
+			case "PAIR":
+				scheduler <- p
+				return
+			}
 		}
 	}
 
@@ -202,7 +203,11 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 		employee.Oldie = true
 	}
 
-	qr := m.Message.QuickReply
+	var qr *QuickReply
+
+	if m.Message != nil {
+		qr = m.Message.QuickReply
+	}
 
 	// Handle selection of preferred location
 	if qr != nil {

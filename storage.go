@@ -27,6 +27,17 @@ func (s *Storage) Init(filename string) {
 		return
 	}
 }
+
+func (s *Storage) GetEmployeeId(ID string) int {
+	var id int
+	err := s.Connection.QueryRow("SELECT id FROM employee WHERE workplace_id=?", ID).Scan(&id)
+	if err != nil {
+		return 0
+	} else {
+		return id
+	}
+}
+
 func (s *Storage) SaveEmployee(employee *Employee) {
 	stmt, err := s.Connection.Prepare("INSERT OR REPLACE INTO employee (workplace_id, name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?)")
 	if err != nil {

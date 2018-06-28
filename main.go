@@ -47,6 +47,7 @@ func main() {
 	for i := 0; i <= 20; i++ {
 		e = &Employee{
 			ID:                fmt.Sprintf("id-%d", i),
+			Active:            true,
 			Name:              names[rand.Intn(len(names))],
 			Office:            offices[rand.Intn(len(offices))],
 			Oldie:             false,
@@ -71,6 +72,12 @@ func main() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
+	wednesdayMorning := time.NewTicker(10 * time.Second)
+	//wednesdayAfternoon := time.NewTicker(20 * time.Second)
+
+	// This should happen every Wednesday morning
+	roster.SetAvailabilityAll(Unavailable)
+
 	for {
 		select {
 		//case <-done:
@@ -78,6 +85,33 @@ func main() {
 		//	return
 		case <-ticker.C:
 			notifyPairs(roster.GetMatches(), msngr)
+
+		// This should happen every Wednesday morning
+		case <-wednesdayMorning.C:
+			for _, e := range roster.Employees {
+				if e.Availability == Unavailable {
+					e.Availability = Uncertain
+					go msngr.Send(Messaging{
+						Recipient: User{
+							ID: e.ID,
+						},
+						Message: &Message{
+							Text: "Good morning {{NAME}}! Are you available to grab a coffee with someone today?",
+							QuickReplies: &[]QuickReply{
+								{
+									ContentType: "text",
+									Title:       "Yes",
+									Payload:     "<AVAILABILITY:YES>",
+								},
+								{
+									ContentType: "text",
+									Title:       "<AVAILABILITY:NO>",
+								},
+							},
+						},
+					})
+				}
+			}
 		}
 	}
 }
@@ -88,8 +122,9 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
 		employee = &Employee{
-			ID:   senderID,
-			Name: "New Name",
+			ID:           senderID,
+			Name:         "New Name",
+			Availability: Unavailable,
 		}
 		roster.Add(employee)
 	}
@@ -108,6 +143,22 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 			},
 		})
 		employee.Oldie = true
+	}
+
+	// Handle selection of preferred location
+	if qr := m.Message.QuickReply; qr != nil {
+		switch qr.Payload {
+		case string(Rembrandtplein):
+			fallthrough
+		case string(Vijzelstraat):
+			fallthrough
+		case string(PietHeinkade):
+			fallthrough
+		case string(Sloterdijk):
+			fallthrough
+		case string(Zuid):
+			(*employee).PreferredLocation = OfficeGroup(qr.Payload)
+		}
 	}
 
 	// Handle selection of preferred location

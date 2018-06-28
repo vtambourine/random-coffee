@@ -1,29 +1,39 @@
 package main
 
 type Roster struct {
-	employees map[string]*Employee
+	Employees map[string]*Employee
 }
 
 func NewRoster() *Roster {
 	return &Roster{
-		employees: make(map[string]*Employee),
+		Employees: make(map[string]*Employee),
 	}
 }
 
 func (r *Roster) Add(employee *Employee) {
-	if _, ok := r.employees[employee.ID]; ok {
+	if _, ok := r.Employees[employee.ID]; ok {
 		return
 	}
-	r.employees[employee.ID] = employee
+	r.Employees[employee.ID] = employee
 }
 
 func (r *Roster) Has(employee *Employee) bool {
-	_, ok := r.employees[employee.ID]
+	_, ok := r.Employees[employee.ID]
 	return ok
 }
 
+func (r *Roster) SetAvailabilityAll(a Availability) {
+	for _, e := range r.Employees {
+		if e.Active {
+			e.Availability = a
+		}
+	}
+}
+
+
+
 func (r *Roster) GetByID(id string) (*Employee, bool) {
-	e, ok := r.employees[id]
+	e, ok := r.Employees[id]
 	if ok {
 		return e, true
 	} else {
@@ -34,7 +44,7 @@ func (r *Roster) GetByID(id string) (*Employee, bool) {
 func (r *Roster) GetMatches() [][]*Employee {
 	groups := make(map[OfficeGroup][]*Employee)
 
-	for _, e := range r.employees {
+	for _, e := range r.Employees {
 		if og := e.PreferredLocation; len(og) > 0 {
 			groups[og] = append(groups[og], e)
 		}

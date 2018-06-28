@@ -71,6 +71,7 @@ func (r *Roster) GetMatches() [][]*Employee {
 					e2.Availability = Matched
 					pair := []*Employee{e, e2}
 					matches = append(matches, pair)
+					continue
 				}
 			}
 		}

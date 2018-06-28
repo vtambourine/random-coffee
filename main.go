@@ -144,7 +144,7 @@ func main() {
 							ID: e.ID,
 						},
 						Message: &Message{
-							Text: "Good morning {{NAME}}! Are you available to grab a coffee with someone today?",
+							Text: fmt.Sprintf("Good morning %s! Are you available to grab a coffee with someone today?", e.Name),
 							QuickReplies: &[]QuickReply{
 								{
 									ContentType: "text",
@@ -185,9 +185,14 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
+		m := messenger.GetMember(senderID)
+
+		log.Printf("received memeber %#v", m)
+
+
 		employee = &Employee{
 			ID:           senderID,
-			Name:         "New Name",
+			Name:         m.Name,
 			Availability: Unavailable,
 		}
 		roster.Add(employee)
@@ -203,7 +208,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				ID: senderID,
 			},
 			Message: &Message{
-				Text: fmt.Sprintf("Hey {{NAME}}, I hope you’re having a great day! I’m here to find a random colleague for you to grab a coffee with."),
+				Text: fmt.Sprintf("Hey %s, I hope you’re having a great day! I’m here to find a random colleague for you to grab a coffee with.", employee.Name),
 			},
 		})
 		employee.Oldie = true

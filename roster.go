@@ -1,5 +1,7 @@
 package main
 
+import "sort"
+
 type Roster struct {
 	Employees map[string]*Employee
 	db        *Storage
@@ -55,13 +57,22 @@ func (r *Roster) GetMatches() [][]*Employee {
 
 	matches := [][]*Employee{}
 	for _, g := range groups {
-		for i := 1; i < len(g); {
-			pair := []*Employee{
-				g[i-1],
-				g[i],
+		sort.Slice(g, func(i, j int) bool {
+			return len(g[i].Matches) > len(g[j].Matches)
+		})
+
+		for i, e := range g {
+			if e.Availability != Available {
+				continue
 			}
-			matches = append(matches, pair)
-			i += 2
+			for _, e2 := range g[i:] {
+				if e2.Availability == Available && !(e2.Matches.wasMatchedWithBefore(e)) {
+					e.Availability = Matched
+					e2.Availability = Matched
+					pair := []*Employee{e, e2}
+					matches = append(matches, pair)
+				}
+			}
 		}
 	}
 

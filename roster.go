@@ -1,9 +1,5 @@
 package main
 
-import (
-	"log"
-	"fmt"
-)
 
 type Roster struct {
 	employees map[string]*Employee
@@ -40,20 +36,17 @@ func (r *Roster) GetMatches() [][]*Employee {
 	groups := make(map[OfficeGroup][]*Employee)
 
 	for _, e := range r.employees {
-		og := e.Office.GetGroup()
-		groups[og] = append(groups[og], e)
+		if og := e.PreferredLocation; len(og) > 0 {
+			groups[og] = append(groups[og], e)
+		}
 	}
 
 	matches := [][]*Employee{}
-	for n, g := range groups {
-		log.Printf("Group from %s", n)
+	for _, g := range groups {
 		m := []*Employee{}
 		for _, e := range g {
-			fmt.Print(e.Name, " ")
 			m = append(m, e)
 		}
-
-		fmt.Println(" ")
 		matches = append(matches, m)
 	}
 

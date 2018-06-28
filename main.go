@@ -49,16 +49,16 @@ func main() {
 	var e *Employee
 	for i := 0; i <= 20; i++ {
 		e = &Employee{
-			ID:     string(i),
-			Name:   names[rand.Intn(len(names))],
-			Office: offices[rand.Intn(len(offices))],
-			Oldie:  false,
+			ID:                fmt.Sprintf("id-%d", i),
+			Name:              names[rand.Intn(len(names))],
+			Office:            offices[rand.Intn(len(offices))],
+			Oldie:             false,
 			PreferredLocation: preferredLocations[rand.Intn(len(preferredLocations))],
 		}
 		//roster[e.ID] = e
 		roster.Add(e)
 
-		fmt.Printf("%v\n", (*e).Name)
+		fmt.Printf("%v in %s\n", (*e).Name, (*e).PreferredLocation)
 	}
 
 	go func() {
@@ -80,9 +80,10 @@ func main() {
 
 	//fmt.Printf("%v", msgr.GetMatches())
 
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(100 * time.Second)
 	defer ticker.Stop()
 
+	notifyPairs(roster.GetMatches(), msngr)
 	//done := make(chan bool)
 	//go func() {
 	//time.Sleep(1 * time.Second)
@@ -128,6 +129,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 	log.Printf("recieved message from: %s", senderID)
 	log.Printf("before process:\n%#v", *employee)
 
+
 	// If user contact bot for the first time, greet him
 	if !employee.Oldie {
 		messenger.Send(Messaging{
@@ -139,6 +141,22 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 			},
 		})
 		employee.Oldie = true
+	}
+
+	// Handle selection of preferred location
+	if qr := m.Message.QuickReply; qr != nil {
+		switch qr.Payload {
+		case string(Rembrandtplein):
+			fallthrough
+		case string(Vijzelstraat):
+			fallthrough
+		case string(PietHeinkade):
+			fallthrough
+		case string(Sloterdijk):
+			fallthrough
+		case string(Zuid):
+			(*employee).PreferredLocation = OfficeGroup(qr.Payload)
+		}
 	}
 
 	// If user doesn;t have preferred location
@@ -192,29 +210,17 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 		})
 	}
 
-	// Process Postbacks
-
-	// Handle selection of preferred location
-	if qr := m.Message.QuickReply; qr != nil {
-		switch qr.Payload {
-		case string(Rembrandtplein):
-			fallthrough
-		case string(Vijzelstraat):
-			fallthrough
-		case string(PietHeinkade):
-			fallthrough
-		case string(Sloterdijk):
-			fallthrough
-		case string(Zuid):
-			employee.PreferredLocation = OfficeGroup(qr.Payload)
-		}
-	}
-
 	log.Printf("after process:\n%#v\n", *employee)
 }
 
 func notifyPairs(matches [][]*Employee, messenger *Messenger) {
-
+	for _, employees := range matches {
+		fmt.Println("== Group: ==")
+		for _, e := range employees {
+			fmt.Printf("%s : %v\n", e.Name, e.ID)
+		}
+		fmt.Println()
+	}
 }
 
 func match(employees *EmployeeRoster) {

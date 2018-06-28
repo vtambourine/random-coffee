@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 type Roster struct {
 	employees map[string]*Employee
 }
@@ -44,13 +42,6 @@ func (r *Roster) GetMatches() [][]*Employee {
 
 	matches := [][]*Employee{}
 	for _, g := range groups {
-		//m := []*Employee{}
-		fmt.Printf("%d - %+v\n\n", len(g), g)
-		//var pair = []*Employee{}
-		//for i, e := range g {
-		//	m = append(m, e)
-		//}
-
 		for i := 1; i < len(g); {
 			pair := []*Employee{
 				g[i-1],
@@ -59,11 +50,6 @@ func (r *Roster) GetMatches() [][]*Employee {
 			matches = append(matches, pair)
 			i += 2
 		}
-
-
-		//fmt.Printf("pair - %v\n\n", pair)
-
-		//matches = append(matches, pair)
 	}
 
 	return matches

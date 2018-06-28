@@ -118,19 +118,3 @@ type Match struct {
 	Reviewed  bool
 	Rating    [2]Rating
 }
-
-//type EmployeeRoster struct {
-//	roster map[string]*Employee
-//}
-//
-//func NewEmployeeRoster() *EmployeeRoster {
-//	return &EmployeeRoster{
-//		roster: make(map[string]*Employee),
-//	}
-//}
-//
-//func (er *EmployeeRoster) Add(employee *Employee) {
-//	if _, ok := er.roster[employee.ID]; !ok {
-//		er.roster[employee.ID] = employee
-//	}
-//}

@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-type EmployeeRoster map[string]*Employee
-
 var offices = []Office{AMS3, AMS9, AMS10, AMS11, AMS14, AMS15, AMS16, AMS17, AMS22}
 
 func main() {
@@ -34,7 +32,6 @@ func main() {
 
 	log.Printf("started at %s\n", addr)
 
-	//roster := make(EmployeeRoster)
 	roster := NewRoster()
 
 	names := []string{
@@ -55,7 +52,6 @@ func main() {
 			Oldie:             false,
 			PreferredLocation: preferredLocations[rand.Intn(len(preferredLocations))],
 		}
-		//roster[e.ID] = e
 		roster.Add(e)
 
 		fmt.Printf("%v in %s\n", (*e).Name, (*e).PreferredLocation)
@@ -70,27 +66,10 @@ func main() {
 		}
 	}()
 
-	//msgr := NewMatcher()
-	//msgr.Add(alice)
-	//msgr.Add(bob)
-
-	// Restore employees from database
-
-	// From all employees choose who
-
-	//fmt.Printf("%v", msgr.GetMatches())
+	// Ticker
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
-
-	notifyPairs(roster.GetMatches(), msngr)
-	//done := make(chan bool)
-	//go func() {
-	//time.Sleep(1 * time.Second)
-	//done <- true
-	//}()
-
-	//match(&employees)
 
 	for {
 		select {
@@ -98,7 +77,6 @@ func main() {
 		//	fmt.Println("Done!")
 		//	return
 		case <-ticker.C:
-			//match(&roster)
 			notifyPairs(roster.GetMatches(), msngr)
 		}
 	}
@@ -107,28 +85,17 @@ func main() {
 func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 	senderID := m.Sender.ID
 
-	//employee, ok := employees[senderID]
-	//if !ok {
-	//	employee = &Employee{
-	//		ID:   senderID,
-	//		Name: "New Name",
-	//	}
-	//	employees[senderID] = employee
-	//}
-
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
 		employee = &Employee{
 			ID:   senderID,
 			Name: "New Name",
 		}
-		//employees[senderID] = employee
 		roster.Add(employee)
 	}
 
 	log.Printf("recieved message from: %s", senderID)
 	log.Printf("before process:\n%#v", *employee)
-
 
 	// If user contact bot for the first time, greet him
 	if !employee.Oldie {
@@ -213,6 +180,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 	log.Printf("after process:\n%#v\n", *employee)
 }
 
+// Send notifications to the pairs
 func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 	for _, pairs := range matches {
 		fmt.Println("== Pair ==")

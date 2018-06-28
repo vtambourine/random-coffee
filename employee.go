@@ -35,11 +35,12 @@ func (o Office) GetGroup() OfficeGroup {
 type OfficeGroup string
 
 const (
-	Rembrandtplein OfficeGroup = "Rembrandtplein"
-	Vijzelstraat   OfficeGroup = "Vijzelstraat"
-	PietHeinkade   OfficeGroup = "Piet Heinkade"
-	Sloterdijk     OfficeGroup = "Sloterdijk"
-	Zuid           OfficeGroup = "Zuid"
+	Rembrandtplein   OfficeGroup = "Rembrandtplein"
+	Vijzelstraat     OfficeGroup = "Vijzelstraat"
+	PietHeinkade     OfficeGroup = "Piet Heinkade"
+	Sloterdijk       OfficeGroup = "Sloterdijk"
+	Zuid             OfficeGroup = "Zuid"
+	OfficeGroupEmpty OfficeGroup = ""
 )
 
 type Frequency int

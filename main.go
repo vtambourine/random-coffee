@@ -59,14 +59,6 @@ func main() {
 		fmt.Printf("%v in %s\n", (*e).Name, (*e).PreferredLocation)
 	}
 
-	//roster.Add(&Employee{
-	//	ID:                "1753630914744347",
-	//	Active:            true,
-	//	Name:              "BENJAMIN",
-	//	Oldie:             true,
-	//	PreferredLocation: preferredLocations[rand.Intn(len(preferredLocations))],
-	//})
-
 	go func() {
 		for {
 			select {

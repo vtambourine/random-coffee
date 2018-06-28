@@ -39,11 +39,16 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 		var id int
 		var workplaceId string
 		var name string
+		var preferredLocation string
+		var availability int
 		var active int
-		_ = rows.Scan(&id, &workplaceId, &name, &active)
+		_ = rows.Scan(&id, &workplaceId, &name, &preferredLocation, &availability, &active)
 		employees[workplaceId] = &Employee{
-			ID:   workplaceId,
-			Name: name,
+			ID:                workplaceId,
+			Name:              name,
+			PreferredLocation: OfficeGroup(preferredLocation),
+			Availability:      Availability(availability),
+			Active:            active != 0,
 		}
 	}
 	return employees

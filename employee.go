@@ -2,49 +2,57 @@ package main
 
 import "time"
 
-type Office int
+type Office string
 
 const (
-	AMS3 Office = iota
-	AMS9
-	AMS10
-	AMS11
-	AMS17
-	AMS19
+	AMS3  Office = "AMS3"  // Vijzelstraat
+	AMS9  Office = "AMS9"  // The Bank
+	AMS10 Office = "AMS10" // Learning Center
+	AMS11 Office = "AMS11" // Prins & Keizer
+	AMS14 Office = "AMS14" // Sloterdijk
+	AMS15 Office = "AMS15" // Piet Hein
+	AMS16 Office = "AMS16" // Bloomhouse
+	AMS17 Office = "AMS17" // UP
+	AMS22 Office = "AMS22" // Atrium
 )
 
-var office = [...]string{
-	"AMS3",  // ??
-	"AMS9",  // the bank
-	"AMS10", // learning center
-	"AMS11", // spaces
-	"AMS17", // piet hein?
-	"AMS19", // ??
-}
+//var office = [...]string{
+//	"AMS3",  // ??
+//	"AMS9",  // the bank
+//	"AMS10", // learning center
+//	"AMS11", // spaces
+//	"AMS17", // piet hein?
+//	"AMS19", // ??
+//}
 
-func (o Office) String() string {
-	return office[o]
-}
+//func (o Office) String() string {
+//	return office[o]
+//}
 
 var officeToGroup = map[Office]OfficeGroup{
 	AMS3:  Vijzelstraat,
 	AMS9:  Rembrandtplein,
 	AMS10: Rembrandtplein,
 	AMS11: Vijzelstraat,
+	AMS14: Sloterdijk,
+	AMS15: PietHeinkade,
+	AMS16: Rembrandtplein,
 	AMS17: PietHeinkade,
-	AMS19: PietHeinkade,
+	AMS22: Zuid,
 }
 
 func (o Office) GetGroup() OfficeGroup {
 	return officeToGroup[o]
 }
 
-type OfficeGroup int
+type OfficeGroup string
 
 const (
-	Rembrandtplein OfficeGroup = iota + 1
-	Vijzelstraat
-	PietHeinkade
+	Rembrandtplein OfficeGroup = "Rembrandtplein"
+	Vijzelstraat   OfficeGroup = "Vijzelstraat"
+	PietHeinkade   OfficeGroup = "Piet Heinkade"
+	Sloterdijk     OfficeGroup = "Sloterdijk"
+	Zuid           OfficeGroup = "Zuid"
 )
 
 type Frequency int
@@ -63,7 +71,7 @@ type Employee struct {
 	LastMatch         Match
 	Availability      []time.Weekday
 	Frequency         Frequency
-	PreferredLocation string // Should be group of the offices
+	PreferredLocation OfficeGroup
 	Oldie             bool
 }
 

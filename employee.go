@@ -74,7 +74,7 @@ type Employee struct {
 	ID                string
 	Name              string
 	Active            bool
-	Matches           []Match
+	Matches           Matches
 	Availability      Availability
 	PreferredLocation OfficeGroup // Preferred office group
 	Oldie             bool        // Already talked to the bot and received introduction message
@@ -101,4 +101,15 @@ type Match struct {
 	Pair     [2]*Employee
 	Time     time.Time
 	Happened MatchStatus // Default to true
+}
+
+type Matches []Match
+
+func (ms Matches) wasMatchedWithBefore(e *Employee) bool {
+	for _, m := range ms {
+		if m.Pair[0] == e || m.Pair[1] == e {
+			return true
+		}
+	}
+	return false
 }

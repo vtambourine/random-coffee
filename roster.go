@@ -1,12 +1,17 @@
 package main
 
+import "sort"
+
 type Roster struct {
 	Employees map[string]*Employee
+	db        *Storage
 }
 
-func NewRoster() *Roster {
+func NewRoster(db *Storage) *Roster {
+	existingEmployees := db.GetAllEmployees()
 	return &Roster{
-		Employees: make(map[string]*Employee),
+		Employees: existingEmployees,
+		db:        db,
 	}
 }
 
@@ -14,6 +19,7 @@ func (r *Roster) Add(employee *Employee) {
 	if _, ok := r.Employees[employee.ID]; ok {
 		return
 	}
+	r.db.SaveEmployee(employee)
 	r.Employees[employee.ID] = employee
 }
 
@@ -26,11 +32,10 @@ func (r *Roster) SetAvailabilityAll(a Availability) {
 	for _, e := range r.Employees {
 		if e.Active {
 			e.Availability = a
+			r.db.SaveEmployee(e)
 		}
 	}
 }
-
-
 
 func (r *Roster) GetByID(id string) (*Employee, bool) {
 	e, ok := r.Employees[id]
@@ -52,13 +57,22 @@ func (r *Roster) GetMatches() [][]*Employee {
 
 	matches := [][]*Employee{}
 	for _, g := range groups {
-		for i := 1; i < len(g); {
-			pair := []*Employee{
-				g[i-1],
-				g[i],
+		sort.Slice(g, func(i, j int) bool {
+			return len(g[i].Matches) > len(g[j].Matches)
+		})
+
+		for i, e := range g {
+			if e.Availability != Available {
+				continue
 			}
-			matches = append(matches, pair)
-			i += 2
+			for _, e2 := range g[i:] {
+				if e2.Availability == Available && !(e2.Matches.wasMatchedWithBefore(e)) {
+					e.Availability = Matched
+					e2.Availability = Matched
+					pair := []*Employee{e, e2}
+					matches = append(matches, pair)
+				}
+			}
 		}
 	}
 

@@ -15,6 +15,10 @@ var scheduler chan string
 func main() {
 	log.Println("Random Coffee initialized")
 
+	db := NewStorage()
+	db.Init("./storage.db")
+	defer db.Connection.Close()
+
 	scheduler = make(chan string)
 
 	accessToken := os.Getenv("PAGE_ACCESS_TOKEN")
@@ -34,7 +38,7 @@ func main() {
 
 	log.Printf("started at %s\n", addr)
 
-	roster := NewRoster()
+	roster := NewRoster(db)
 
 	names := []string{
 		"Shanel", "Al", "Sandee", "Jimmie",
@@ -55,15 +59,17 @@ func main() {
 			PreferredLocation: preferredLocations[rand.Intn(len(preferredLocations))],
 		}
 		roster.Add(e)
+	}
 
-		fmt.Printf("%v in %s\n", (*e).Name, (*e).PreferredLocation)
+	for _, emp := range roster.Employees {
+		fmt.Printf("%v in %s\n", emp.Name, emp.PreferredLocation)
 	}
 
 	go func() {
 		for {
 			select {
 			case m := <-msngr.C:
-				go processMessage(m, msngr, roster)
+				go processMessage(m, msngr, roster, db)
 			}
 		}
 	}()
@@ -162,7 +168,7 @@ func main() {
 	}
 }
 
-func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
+func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Storage) {
 	senderID := m.Sender.ID
 
 	if m.Postback != nil {
@@ -222,6 +228,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 			fallthrough
 		case string(Zuid):
 			(*employee).PreferredLocation = OfficeGroup(qr.Payload)
+			db.SaveEmployee(employee)
 
 			messenger.Send(Messaging{
 				Recipient: User{

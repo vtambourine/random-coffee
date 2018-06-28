@@ -80,7 +80,7 @@ func main() {
 
 	//fmt.Printf("%v", msgr.GetMatches())
 
-	ticker := time.NewTicker(100 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
 	notifyPairs(roster.GetMatches(), msngr)
@@ -198,7 +198,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 		})
 	}
 
-	// If user have preferred location (and other condition moght apply)
+	// If user have preferred location (and other condition might apply)
 	if len(employee.PreferredLocation) > 0 {
 		messenger.Send(Messaging{
 			Recipient: User{
@@ -214,24 +214,32 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 }
 
 func notifyPairs(matches [][]*Employee, messenger *Messenger) {
-	for _, employees := range matches {
-		fmt.Println("== Group: ==")
-		for _, e := range employees {
-			fmt.Printf("%s : %v\n", e.Name, e.ID)
+	for _, pairs := range matches {
+		fmt.Println("== Pair ==")
+
+		go messenger.Send(Messaging{
+			Recipient: User{
+				ID: pairs[0].ID,
+			},
+			Message: &Message{
+				Text: fmt.Sprintf("Perfect. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[1].Name),
+			},
+		})
+
+		go messenger.Send(Messaging{
+			Recipient: User{
+				ID: pairs[1].ID,
+			},
+			Message: &Message{
+				Text: fmt.Sprintf(" Perfect. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[0].Name),
+			},
+		})
+
+		for _, p := range pairs {
+			fmt.Printf("%s : %v\n", p.Name, p.ID)
+
 		}
+
 		fmt.Println()
 	}
-}
-
-func match(employees *EmployeeRoster) {
-	fmt.Print("MATCHING ")
-	fmt.Println(time.Now().Format(time.UnixDate))
-
-	//match := NewMatcher()
-	for _, e := range *employees {
-		log.Println(e.Name)
-		//match.Add(e)
-	}
-
-	//fmt.Printf("Match: %v\n\n", match.GetMatches())
 }

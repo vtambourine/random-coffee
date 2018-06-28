@@ -54,10 +54,20 @@ const (
 type Availability int
 
 const (
-	Unavailable Availability = iota // Unavailable for matching this week
-	Uncertain
+	Unknown Availability = iota
+	Unavailable// Unavailable for matching this week
 	Available // Available for matching this week
-	Matched   // Already matched this week
+	WaitingForMatch
+	Matched // Already matched this week
+)
+
+type ConversationState int
+
+const (
+	ConversationStateUnknown ConversationState = iota
+	ConversationStateLocation
+	ConversationStateAvailability
+	ConversationStateFeedback
 )
 
 type Employee struct {
@@ -68,6 +78,7 @@ type Employee struct {
 	Availability      Availability
 	PreferredLocation OfficeGroup // Preferred office group
 	Oldie             bool        // Already talked to the bot and received introduction message
+	ConversationState ConversationState
 }
 
 func (e *Employee) wasMatchedToday() bool {

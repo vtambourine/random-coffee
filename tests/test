@@ -1,0 +1,42 @@
+curl -X POST \
+  'https://graph.facebook.com/v2.11/me/messenger_profile?access_token=EAAGUCR82yskBAIlfX6veRPZBirNv1NhOjuNbj0fxjvDBUv5yJLkJTDzLMgtfHzmlvynjBJDP53ZAXMXZCkCIJ81c3URx6dPZApZCho5UNSZCKIpTyHAkqAjzVs8gdbo9iEWjZCSv83BzHWYyf5wjTNDPME0QyqxFZBZCAMU41m7030QZDZD' \
+  -H 'Cache-Control: no-cache' \
+  -H 'Content-Type: application/json' \
+  -H 'Postman-Token: 080b5e50-f134-4d72-99b7-ec603f311415' \
+  -d '{
+  "persistent_menu":[
+    {
+      "locale":"default",
+      "composer_input_disabled": true,
+      "call_to_actions":[
+        {
+          "title":"Preferences",
+          "type":"nested",
+          "call_to_actions":[
+            {
+              "title":"Change location preference",
+              "type":"postback",
+              "payload":"CHANGE_LOCATION_PAYLOAD"
+            },
+            {
+              "title":"Unsubscribe",
+              "type":"postback",
+              "payload":"UNSUBSCRIBE_PAYLOAD"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}'
+
+curl -X POST \
+  'https://graph.facebook.com/v2.11/me/messenger_profile?access_token=EAAGUCR82yskBAIlfX6veRPZBirNv1NhOjuNbj0fxjvDBUv5yJLkJTDzLMgtfHzmlvynjBJDP53ZAXMXZCkCIJ81c3URx6dPZApZCho5UNSZCKIpTyHAkqAjzVs8gdbo9iEWjZCSv83BzHWYyf5wjTNDPME0QyqxFZBZCAMU41m7030QZDZD' \
+  -H 'Cache-Control: no-cache' \
+  -H 'Content-Type: application/json' \
+  -H 'Postman-Token: 080b5e50-f134-4d72-99b7-ec603f311415' \
+  -d '{
+    "get_started":{
+      "payload":"GET_STARTED_PAYLOAD"
+    }
+}'

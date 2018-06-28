@@ -10,10 +10,12 @@ import (
 
 var offices = []Office{AMS3, AMS9, AMS10, AMS11, AMS14, AMS15, AMS16, AMS17, AMS22}
 
+var scheduler chan string
+
 func main() {
 	log.Println("Random Coffee initialized")
 
-	log.Println("Random Coffee initialized")
+	scheduler = make(chan string)
 
 	accessToken := os.Getenv("PAGE_ACCESS_TOKEN")
 	verifyToken := os.Getenv("VERIFY_TOKEN")
@@ -44,12 +46,11 @@ func main() {
 	preferredLocations := []OfficeGroup{Rembrandtplein, Vijzelstraat, PietHeinkade, Sloterdijk, Zuid}
 
 	var e *Employee
-	for i := 0; i <= 20; i++ {
+	for i := 0; i <= 2; i++ {
 		e = &Employee{
 			ID:                fmt.Sprintf("id-%d", i),
 			Active:            true,
 			Name:              names[rand.Intn(len(names))],
-			Office:            offices[rand.Intn(len(offices))],
 			Oldie:             false,
 			PreferredLocation: preferredLocations[rand.Intn(len(preferredLocations))],
 		}
@@ -57,6 +58,14 @@ func main() {
 
 		fmt.Printf("%v in %s\n", (*e).Name, (*e).PreferredLocation)
 	}
+
+	//roster.Add(&Employee{
+	//	ID:                "1753630914744347",
+	//	Active:            true,
+	//	Name:              "BENJAMIN",
+	//	Oldie:             true,
+	//	PreferredLocation: preferredLocations[rand.Intn(len(preferredLocations))],
+	//})
 
 	go func() {
 		for {
@@ -69,28 +78,70 @@ func main() {
 
 	// Ticker
 
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
+	//ticker := time.NewTicker(10 * time.Second)
+	//defer ticker.Stop()
 
-	wednesdayMorning := time.NewTicker(10 * time.Second)
+	for {
+		select {
+		case event := <-scheduler:
+			log.Println(event)
+			switch event {
+			case "AVA":
+				roster.SetAvailabilityAll(Unavailable)
+				for _, e := range roster.Employees {
+					log.Printf("Sending to %s\n", e.ID)
+					if e.Availability == Unavailable {
+						e.Availability = Unknown
+						go msngr.Send(Messaging{
+							Recipient: User{
+								ID: e.ID,
+							},
+							Message: &Message{
+								Text: "Good morning {{NAME}}! Are you available to grab a coffee with someone today?",
+								QuickReplies: &[]QuickReply{
+									{
+										ContentType: "text",
+										Title:       "Yes",
+										Payload:     "<AVAILABILITY:YES>",
+									},
+									{
+										ContentType: "text",
+										Title:       "Not today",
+										Payload:     "<AVAILABILITY:NO>",
+									},
+								},
+							},
+						})
+					}
+				}
+
+			case "PAIR":
+				notifyPairs(roster.GetMatches(), msngr)
+			}
+		}
+	}
+
+	wednesdayMorning := time.After(3 * time.Second)
 	//wednesdayAfternoon := time.NewTicker(20 * time.Second)
-
-	// This should happen every Wednesday morning
-	roster.SetAvailabilityAll(Unavailable)
 
 	for {
 		select {
 		//case <-done:
 		//	fmt.Println("Done!")
 		//	return
-		case <-ticker.C:
+		//case <-ticker.C:
+		case <-time.After(15 * time.Second):
 			notifyPairs(roster.GetMatches(), msngr)
 
 		// This should happen every Wednesday morning
-		case <-wednesdayMorning.C:
+		case <-wednesdayMorning:
+			log.Println("\nROSTOER\n")
+			roster.SetAvailabilityAll(Unavailable)
+
 			for _, e := range roster.Employees {
+				log.Printf("Sending to %s\n", e.ID)
 				if e.Availability == Unavailable {
-					e.Availability = Uncertain
+					e.Availability = Unknown
 					go msngr.Send(Messaging{
 						Recipient: User{
 							ID: e.ID,
@@ -105,19 +156,33 @@ func main() {
 								},
 								{
 									ContentType: "text",
-									Title:       "<AVAILABILITY:NO>",
+									Title:       "Not today",
+									Payload:     "<AVAILABILITY:NO>",
 								},
 							},
 						},
 					})
 				}
 			}
+
+		default:
+			// do nothing
 		}
 	}
 }
 
 func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 	senderID := m.Sender.ID
+
+	if t := m.Message.Text; len(t) > 0 {
+		switch t {
+		case "AVA":
+			fallthrough
+		case "PAIR":
+			scheduler <- t
+			return
+		}
+	}
 
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
@@ -145,8 +210,10 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 		employee.Oldie = true
 	}
 
+	qr := m.Message.QuickReply
+
 	// Handle selection of preferred location
-	if qr := m.Message.QuickReply; qr != nil {
+	if qr != nil {
 		switch qr.Payload {
 		case string(Rembrandtplein):
 			fallthrough
@@ -158,23 +225,69 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 			fallthrough
 		case string(Zuid):
 			(*employee).PreferredLocation = OfficeGroup(qr.Payload)
+
+			messenger.Send(Messaging{
+				Recipient: User{
+					ID: senderID,
+				},
+				Message: &Message{
+					Text: fmt.Sprintf("Great! I’m going to grind some beans and I’ll get back to you with a match shortly."),
+				},
+			})
 		}
 	}
 
-	// Handle selection of preferred location
-	if qr := m.Message.QuickReply; qr != nil {
+	// Handle availability change
+	if qr != nil {
 		switch qr.Payload {
-		case string(Rembrandtplein):
-			fallthrough
-		case string(Vijzelstraat):
-			fallthrough
-		case string(PietHeinkade):
-			fallthrough
-		case string(Sloterdijk):
-			fallthrough
-		case string(Zuid):
-			(*employee).PreferredLocation = OfficeGroup(qr.Payload)
+		case "<AVAILABILITY:YES>":
+			(*employee).Availability = Available
+			messenger.Send(Messaging{
+				Recipient: User{
+					ID: senderID,
+				},
+				Message: &Message{
+					Text: "Perfect. I’ll get back to you around noon with your match. Have a good morning!",
+				},
+			})
+
+		case "<AVAILABILITY:NO>":
+			messenger.Send(Messaging{
+				Recipient: User{
+					ID: senderID,
+				},
+				Message: &Message{
+					Text: "No problem, I’ll talk to you next Wednesday. Have a great week and weekend!",
+					QuickReplies: &[]QuickReply{
+						{
+							ContentType: "text",
+							Title:       "Sounds good!",
+							Payload:     "<AVAILABILITY:POSTPONE>",
+						},
+						{
+							ContentType: "text",
+							Title:       "I’d like to unsubscribe",
+							Payload:     "<AVAILABILITY:UNSUBSCRIBE>",
+						},
+					},
+				},
+			})
+
+		case "<AVAILABILITY:UNSUBSCRIBE>":
+			employee.Active = false
+			messenger.Send(Messaging{
+				Recipient: User{
+					ID: senderID,
+				},
+				Message: &Message{
+					Text: "YOU'VE BEEN UNSUBSCRBED",
+				},
+			})
 		}
+	}
+
+	if qr != nil {
+		return
 	}
 
 	// If user doesn;t have preferred location
@@ -226,9 +339,8 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster) {
 				Text: fmt.Sprintf("Great! I’m going to grind some beans and I’ll get back to you with a match shortly."),
 			},
 		})
+		return
 	}
-
-	log.Printf("after process:\n%#v\n", *employee)
 }
 
 // Send notifications to the pairs

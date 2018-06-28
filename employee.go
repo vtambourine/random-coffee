@@ -98,7 +98,7 @@ const (
 )
 
 type Match struct {
-	Pair     [2]*Employee
+	Pair     []*Employee
 	Time     time.Time
 	Happened MatchStatus // Default to true
 }
@@ -107,7 +107,7 @@ type Matches []Match
 
 func (ms Matches) wasMatchedWithBefore(e *Employee) bool {
 	for _, m := range ms {
-		if m.Pair[0] == e || m.Pair[1] == e {
+		if (m.Pair[0] == e || m.Pair[1] == e) && m.Happened == MatchHappened {
 			return true
 		}
 	}

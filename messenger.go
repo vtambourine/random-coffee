@@ -34,6 +34,7 @@ type Event struct {
 }
 
 type Messaging struct {
+	MessagingType string    `json:"messaging_type,omitempty"`
 	Sender        User      `json:"sender,omitempty"`
 	Recipient     User      `json:"recipient,omitempty"`
 	Timestamp     int       `json:"timestamp,omitempty"`

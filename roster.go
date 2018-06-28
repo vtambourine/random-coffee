@@ -1,6 +1,9 @@
 package main
 
-import "sort"
+import (
+	"sort"
+	"fmt"
+)
 
 type Roster struct {
 	Employees map[string]*Employee
@@ -8,9 +11,10 @@ type Roster struct {
 }
 
 func NewRoster(db *Storage) *Roster {
-	existingEmployees := db.GetAllEmployees()
+	//existingEmployees := db.GetAllEmployees()
 	return &Roster{
-		Employees: existingEmployees,
+		//Employees: existingEmployees,
+		Employees: make(map[string]*Employee),
 		db:        db,
 	}
 }
@@ -62,16 +66,18 @@ func (r *Roster) GetMatches() [][]*Employee {
 		})
 
 		for i, e := range g {
+			fmt.Printf("current user %v\n", e)
 			if e.Availability != Available {
 				continue
 			}
-			for _, e2 := range g[i:] {
+			for _, e2 := range g[i+1:] {
 				if e2.Availability == Available && !(e2.Matches.wasMatchedWithBefore(e)) {
+					fmt.Printf("%v match %v\n", e, e2)
 					e.Availability = Matched
 					e2.Availability = Matched
 					pair := []*Employee{e, e2}
 					matches = append(matches, pair)
-					continue
+					break
 				}
 			}
 		}

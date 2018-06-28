@@ -90,6 +90,7 @@ func main() {
 					if e.Availability == Unavailable {
 						e.Availability = Unknown
 						go msngr.Send(Messaging{
+							MessagingType: "UPDATE",
 							Recipient: User{
 								ID: e.ID,
 							},
@@ -171,18 +172,6 @@ func main() {
 func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Storage) {
 	senderID := m.Sender.ID
 
-	if m.Postback != nil {
-		if p := m.Postback.Payload; len(p) > 0 {
-			switch p {
-			case "AVA":
-				fallthrough
-			case "PAIR":
-				scheduler <- p
-				return
-			}
-		}
-	}
-
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
 		m := messenger.GetMember(senderID)
@@ -194,25 +183,64 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			ID:           senderID,
 			Name:         m.Name,
 			Availability: Unavailable,
+			Active: true,
 		}
 		roster.Add(employee)
+	}
+
+	if m.Postback != nil {
+		if p := m.Postback.Payload; len(p) > 0 {
+			switch p {
+			case "AVA":
+				fallthrough
+			case "PAIR":
+				scheduler <- p
+				return
+
+			case "GET_STARTED_PAYLOAD":
+				messenger.Send(Messaging{
+					Recipient: User{
+						ID: senderID,
+					},
+					Message: &Message{
+						Text: fmt.Sprintf("Hey %s, I hope you’re having a great day! I’m here to find a random colleague for you to grab a coffee with.", employee.Name),
+					},
+				})
+				employee.Oldie = true
+
+			case "<ACTION:UNSUBSCRIBE>":
+				employee.Active = false
+				employee.Oldie = false
+				messenger.Send(Messaging{
+					Recipient: User{
+						ID: senderID,
+					},
+					Message: &Message{
+						Text: "YOU'VE BEEN UNSUBSCRIBED. SORRY TO SEE YOU GO",
+					},
+				})
+				return
+			}
+
+
+		}
 	}
 
 	log.Printf("recieved message from: %s", senderID)
 	log.Printf("before process:\n%#v", *employee)
 
 	// If user contact bot for the first time, greet him
-	if !employee.Oldie {
-		messenger.Send(Messaging{
-			Recipient: User{
-				ID: senderID,
-			},
-			Message: &Message{
-				Text: fmt.Sprintf("Hey %s, I hope you’re having a great day! I’m here to find a random colleague for you to grab a coffee with.", employee.Name),
-			},
-		})
-		employee.Oldie = true
-	}
+	//if !employee.Oldie {
+	//	messenger.Send(Messaging{
+	//		Recipient: User{
+	//			ID: senderID,
+	//		},
+	//		Message: &Message{
+	//			Text: fmt.Sprintf("Hey %s, I hope you’re having a great day! I’m here to find a random colleague for you to grab a coffee with.", employee.Name),
+	//		},
+	//	})
+	//	employee.Oldie = true
+	//}
 
 	var qr *QuickReply
 
@@ -284,6 +312,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 		case "<AVAILABILITY:UNSUBSCRIBE>":
 			employee.Active = false
+			employee.Oldie = false
 			messenger.Send(Messaging{
 				Recipient: User{
 					ID: senderID,
@@ -356,6 +385,15 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 	for _, pairs := range matches {
 		fmt.Println("== Pair ==")
+
+		match := Match{
+			Pair: pairs,
+			Time: time.Now(),
+			Happened: MatchHappened,
+		}
+
+		pairs[0].Matches = append(pairs[0].Matches, match)
+		pairs[1].Matches = append(pairs[1].Matches, match)
 
 		go messenger.Send(Messaging{
 			Recipient: User{

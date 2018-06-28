@@ -2,11 +2,14 @@ package main
 
 type Roster struct {
 	Employees map[string]*Employee
+	db        *Storage
 }
 
-func NewRoster() *Roster {
+func NewRoster(db *Storage) *Roster {
+	existingEmployees := db.GetAllEmployees()
 	return &Roster{
-		Employees: make(map[string]*Employee),
+		Employees: existingEmployees,
+		db:        db,
 	}
 }
 
@@ -14,6 +17,7 @@ func (r *Roster) Add(employee *Employee) {
 	if _, ok := r.Employees[employee.ID]; ok {
 		return
 	}
+	r.db.SaveEmployee(employee)
 	r.Employees[employee.ID] = employee
 }
 
@@ -26,11 +30,10 @@ func (r *Roster) SetAvailabilityAll(a Availability) {
 	for _, e := range r.Employees {
 		if e.Active {
 			e.Availability = a
+			r.db.SaveEmployee(e)
 		}
 	}
 }
-
-
 
 func (r *Roster) GetByID(id string) (*Employee, bool) {
 	e, ok := r.Employees[id]

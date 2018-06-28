@@ -60,6 +60,7 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 			PreferredLocation: OfficeGroup(preferredLocation),
 			Availability:      Availability(availability),
 			Active:            active != 0,
+			Oldie:             true,
 		}
 	}
 	return employees

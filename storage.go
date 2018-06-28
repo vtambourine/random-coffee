@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"log"
 )
 
 type Storage struct {
@@ -24,6 +25,16 @@ func (s *Storage) Init(filename string) {
 	if err != nil {
 		fmt.Printf("[DATABASE ERROR] %v", err)
 		return
+	}
+}
+func (s *Storage) SaveEmployee(employee *Employee) {
+	stmt, err := s.Connection.Prepare("INSERT OR REPLACE INTO employee (workplace_id, name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?)")
+	if err != nil {
+		log.Print(err)
+	}
+	_, err = stmt.Exec(employee.ID, employee.Name, employee.PreferredLocation, employee.Availability, employee.Active)
+	if err != nil {
+		log.Print(err)
 	}
 }
 

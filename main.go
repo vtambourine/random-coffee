@@ -472,17 +472,9 @@ func checkAvailability(roster *Roster, db *Storage, messenger *Messenger) {
 // Send notifications to the pairs
 func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 	for i, pairs := range matches {
-		match := Match{
-			Pair:     pairs,
-			Time:     time.Now(),
-			Happened: MatchHappened,
-		}
 
 		log.Printf("pairs %2d\n", i)
 		log.Printf("%s(%s):%s(%s)\n", pairs[0].Name, pairs[0].ID, pairs[1].Name, pairs[1].ID)
-
-		pairs[0].Matches = append(pairs[0].Matches, match)
-		pairs[1].Matches = append(pairs[1].Matches, match)
 
 		go messenger.Send(Messaging{
 			MessagingType: MessagingTypeUpdate,

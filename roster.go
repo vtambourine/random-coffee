@@ -83,5 +83,7 @@ func (r *Roster) GetMatches() [][]*Employee {
 		}
 	}
 
+	r.db.SaveAllMatches(matches)
+
 	return matches
 }

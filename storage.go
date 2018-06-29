@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
+	"time"
 )
 
 type Storage struct {
@@ -77,12 +78,25 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 }
 
 func (s *Storage) SaveMatch(match *Match) {
-	stmt, err := s.Connection.Prepare("INSERT INTO matches (match_id_1, match_id_2, created_at) VALUES(?, ?, ?)")
+	stmt, err := s.Connection.Prepare("INSERT INTO matches (match_id_1, match_id_2, created_at, happened) VALUES(?, ?, ?, ?)")
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}
-	_, err = stmt.Exec(s.GetEmployeeId(match.Pair[0].ID), s.GetEmployeeId(match.Pair[1].ID), match.Time)
+	_, err = stmt.Exec(s.GetEmployeeId(match.Pair[0].ID), s.GetEmployeeId(match.Pair[1].ID), match.Time, match.Happened)
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
+	}
+}
+
+func (s *Storage) SaveAllMatches(matches [][]*Employee) {
+	for _, pair := range matches {
+		match := &Match{
+			Pair:     pair,
+			Time:     time.Now(),
+			Happened: MatchUnknown,
+		}
+		s.SaveMatch(match)
+		s.SaveEmployee(match.Pair[0])
+		s.SaveEmployee(match.Pair[1])
 	}
 }

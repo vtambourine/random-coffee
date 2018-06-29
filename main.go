@@ -2,20 +2,20 @@ package main
 
 import (
 	"fmt"
+	"github.com/natefinch/lumberjack"
+	"github.com/robfig/cron"
 	"log"
 	"math/rand"
 	"os"
-	"github.com/robfig/cron"
-	"github.com/natefinch/lumberjack"
 )
 
 var scheduler chan string
 
 func main() {
 	log.SetOutput(&lumberjack.Logger{
-		Filename:   "./rc.log",
-		MaxSize:    100, // megabytes
-		MaxAge:     28, //days
+		Filename: "./rc.log",
+		MaxSize:  100, // megabytes
+		MaxAge:   28,  //days
 	})
 
 	log.Println("Random Coffee initialized")
@@ -206,7 +206,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				})
 
 			case "UNSUBSCRIBE_PAYLOAD":
-				log.Printf("%s:%s - unsubscribed %s", senderID, employee.Name)
+				log.Printf("%s:%s - unsubscribed", senderID, employee.Name)
 				if employee.Active {
 					messenger.SendMessage(Messaging{
 						Recipient: User{

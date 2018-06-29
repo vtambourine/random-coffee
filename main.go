@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"time"
+	"github.com/robfig/cron"
 )
 
 var scheduler chan string
@@ -54,7 +55,7 @@ func main() {
 	preferredLocations := []OfficeGroup{Rembrandtplein, Vijzelstraat, PietHeinkade, Sloterdijk, Zuid}
 
 	var e *Employee
-	for i := 0; i <= 0; i++ {
+	for i := 0; i < 0; i++ {
 		e = &Employee{
 			ID:                fmt.Sprintf("id-%d", i),
 			Active:            true,
@@ -64,17 +65,6 @@ func main() {
 		}
 		roster.Add(e)
 	}
-
-	//e = &Employee{
-	//	ID:                "100012152646126",
-	//	Active:            true,
-	//	Availability:      Available,
-	//	Name:              "Veniamin Kleshchenkov",
-	//	FirstName:         "Veniamin",
-	//	Oldie:             false,
-	//	PreferredLocation: Vijzelstraat,
-	//}
-	//roster.Add(e)
 
 	// Start listen to new messages ot the bot
 	go func() {
@@ -86,44 +76,37 @@ func main() {
 		}
 	}()
 
-	for {
-		select {
-		case event := <-scheduler:
-			log.Println(event)
-			switch event {
-			case "TRIGGER_AVAILABILITY":
-				checkAvailability(roster, db, messenger)
+	// Start listen to cheat codes
+	go func() {
+		for {
+			select {
+			case event := <-scheduler:
+				switch event {
+				case "TRIGGER_AVAILABILITY":
+					checkAvailability(roster, db, messenger)
 
-			case "TRIGGER_MATCH":
-				notifyPairs(roster.GetMatches(), messenger)
+				case "TRIGGER_MATCH":
+					notifyPairs(roster.GetMatches(), messenger)
+				}
 			}
 		}
-	}
+	}()
 
-	wednesdayMorning := time.After(3 * time.Second)
-	//wednesdayAfternoon := time.NewTicker(20 * time.Second)
+	// Schedule events
+	c := cron.New()
 
-	// Ticker
+	// Every Wednesday morning check person's availability
+	c.AddFunc("0 01 10 * * WED", func() {
+		checkAvailability(roster, db, messenger)
+	})
 
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
+	// Every Wednesday afternoon send match results
+	c.AddFunc("0 01 13 * * WED", func() {
+		notifyPairs(roster.GetMatches(), messenger)
+	})
 
-	for {
-		select {
-		//case <-done:
-		//	fmt.Println("Done!")
-		//	return
-		case <-ticker.C:
-		//case <-time.After(15 * time.Second):
-		//notifyPairs(roster.GetMatches(), messenger)
-
-		// This should happen every Wednesday morning
-		case <-wednesdayMorning:
-			// check availability
-		default:
-			// do nothing
-		}
-	}
+	// Block main process
+	select {}
 }
 
 func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Storage) {

@@ -19,6 +19,7 @@ func NewStorage() *Storage {
 }
 
 func (s *Storage) Init(filename string) {
+	log.Printf("[STORAGE] Initialising storage with file %s", filename)
 	s.filename = filename
 	var err error
 	s.Connection, err = sql.Open("sqlite3", s.filename)

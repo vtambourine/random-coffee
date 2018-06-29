@@ -65,6 +65,7 @@ func (s *Storage) GetEmployeeId(workplaceId string) int {
 }
 
 func (s *Storage) SaveEmployee(employee *Employee) {
+	log.Printf("[STORAGE] Saving employee (%s) %s to the database", employee.ID, employee.Name)
 	id := s.GetEmployeeId(employee.ID)
 	if id != 0 {
 		stmt, err := s.Connection.Prepare("UPDATE employee SET workplace_id = ?, name = ?, first_name = ?, preferred_location = ?, availability = ?, active = ? WHERE id = ?")
@@ -89,6 +90,7 @@ func (s *Storage) SaveEmployee(employee *Employee) {
 }
 
 func (s *Storage) GetAllEmployees() map[string]*Employee {
+	log.Printf("[STORAGE] Fetching all employees from database file %s", s.filename)
 	employees := make(map[string]*Employee)
 	dbEmployees, err := s.Connection.Query("SELECT * FROM employee")
 	if err != nil {

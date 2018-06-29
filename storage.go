@@ -117,6 +117,7 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 			Active:            active != 0,
 			Oldie:             true,
 		}
+		log.Printf("[STORAGE] Fetching all previous matches from employee with id %d (%s)", id, workplaceId)
 		dbMatchesForEmployee, err := s.Connection.Query("SELECT match1_id, match2_id, created_at, happened FROM matches WHERE match1_id = ? OR match2_id = ?", id, id)
 		if err != nil {
 			log.Printf("[DATABASE ERROR] %v", err)
@@ -149,6 +150,7 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 }
 
 func (s *Storage) SaveMatch(match *Match) {
+	log.Printf("[STORAGE] Saving match between (%s) %s and (%s) %s to the database", match.Pair[0].ID, match.Pair[0].Name, match.Pair[1].ID, match.Pair[1].Name)
 	stmt, err := s.Connection.Prepare("INSERT INTO matches (match1_id, match2_id, created_at, happened) VALUES(?, ?, ?, ?)")
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)

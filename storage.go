@@ -65,13 +65,26 @@ func (s *Storage) GetEmployeeId(workplaceId string) int {
 }
 
 func (s *Storage) SaveEmployee(employee *Employee) {
-	stmt, err := s.Connection.Prepare("INSERT OR REPLACE INTO employee (workplace_id, name, first_name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?, ?)")
-	if err != nil {
-		log.Printf("[DATABASE ERROR] %v", err)
-	}
-	_, err = stmt.Exec(employee.ID, employee.Name, employee.FirstName, employee.PreferredLocation, employee.Availability, employee.Active)
-	if err != nil {
-		log.Printf("[DATABASE ERROR] %v", err)
+	id := s.GetEmployeeId(employee.ID)
+	if id != 0 {
+		stmt, err := s.Connection.Prepare("UPDATE employee SET workplace_id = ?, name = ?, first_name = ?, preferred_location = ?, availability = ?, active = ? WHERE id = ?")
+		if err != nil {
+			log.Printf("[DATABASE ERROR] %v", err)
+		}
+		_, err = stmt.Exec(employee.ID, employee.Name, employee.FirstName, employee.PreferredLocation, employee.Availability, employee.Active, id)
+		if err != nil {
+			log.Printf("[DATABASE ERROR] %v", err)
+		}
+	} else {
+		stmt, err := s.Connection.Prepare("INSERT INTO employee (workplace_id, name, first_name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?, ?)")
+		if err != nil {
+			log.Printf("[DATABASE ERROR] %v", err)
+		}
+		_, err = stmt.Exec(employee.ID, employee.Name, employee.FirstName, employee.PreferredLocation, employee.Availability, employee.Active)
+		if err != nil {
+			log.Printf("[DATABASE ERROR] %v", err)
+		}
+
 	}
 }
 

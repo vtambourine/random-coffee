@@ -3,8 +3,8 @@ package main
 import "time"
 
 var admins = []string{
-	"1753630914744347", // Benjamin Tambourine
-	"100012152646126",  // Benjamin Tambourine
+	//"1753630914744347", // Benjamin Tambourine
+	//"100012152646126",  // Benjamin Tambourine
 	"100012012122201",  // Stefan Poschina
 	"100024242914539",  // Artem Nikolenko
 	"100026519885302",  // Eric Reichbaum

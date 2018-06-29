@@ -121,6 +121,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
+		log.Printf("checking user in roster: %s ... %v", senderID, ok)
 		m := messenger.GetMember(senderID)
 
 		employee = &Employee{
@@ -131,6 +132,8 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			Active:       true,
 		}
 		roster.Add(employee)
+	} else {
+		log.Printf("checking user in roster: %s(%s) ... %v", employee.ID, employee.Name, ok)
 	}
 
 	messenger.Send(Messaging{
@@ -470,6 +473,10 @@ func checkAvailability(roster *Roster, db *Storage, messenger *Messenger) {
 	roster.SetAvailabilityAll(Unavailable)
 	log.Printf("Running checkAvailability")
 	for _, employee := range roster.Employees {
+		if !employee.Active {
+			continue
+		}
+
 		if employee.Availability == Unavailable {
 			employee.Availability = Unknown
 			db.SaveEmployee(employee)

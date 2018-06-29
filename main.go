@@ -180,7 +180,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 							ID: senderID,
 						},
 						Message: &Message{
-							Text: "You already subscribed.",
+							Text: "You've already subscribed.",
 						},
 					})
 					return
@@ -227,8 +227,6 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				})
 
 			case "UNSUBSCRIBE_PAYLOAD":
-				employee.Active = false
-				db.SaveEmployee(employee)
 				log.Printf("%s:%s - unsubscribed %s", senderID, employee.Name)
 				if employee.Active {
 					messenger.SendMessage(Messaging{
@@ -245,10 +243,12 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 							ID: senderID,
 						},
 						Message: &Message{
-							Text: "You already unsubscribed.",
+							Text: "You've already unsubscribed.",
 						},
 					})
 				}
+				employee.Active = false
+				db.SaveEmployee(employee)
 				return
 
 			case "CHANGE_LOCATION_PAYLOAD":

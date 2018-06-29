@@ -6,11 +6,18 @@ import (
 	"math/rand"
 	"os"
 	"time"
+	"github.com/natefinch/lumberjack"
 )
 
 var scheduler chan string
 
 func main() {
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   "/home/vkleshchenko/random-coffee_logs/rc.log",
+		MaxSize:    100, // megabytes
+		MaxAge:     28, //days
+	})
+
 	log.Println("Random Coffee initialized")
 
 	accessToken := os.Getenv("PAGE_ACCESS_TOKEN")
@@ -128,6 +135,7 @@ func main() {
 
 func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Storage) {
 	senderID := m.Sender.ID
+	log.Printf("recieved message from: %s", senderID)
 
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
@@ -165,6 +173,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			case "TRIGGER_MATCH":
 				fallthrough
 			case "TRIGGER_AVAILABILITY":
+				log.Printf("Force %s", p)
 				if employee.IsAdmin() {
 					scheduler <- p
 				} else {
@@ -198,6 +207,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 				fallthrough
 			case "GET_STARTED_PAYLOAD":
+				log.Printf("%s:%s - subscribed", senderID, employee.Name)
 				messenger.Send(Messaging{
 					Recipient: User{
 						ID: senderID,
@@ -237,6 +247,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			case "UNSUBSCRIBE_PAYLOAD":
 				employee.Active = false
 				db.SaveEmployee(employee)
+				log.Printf("%s:%s - unsubscribed %s", senderID, employee.Name)
 				if employee.Active {
 					messenger.Send(Messaging{
 						Recipient: User{
@@ -318,6 +329,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 		case string(Zuid):
 			(*employee).PreferredLocation = OfficeGroup(qr.Payload)
 			db.SaveEmployee(employee)
+			log.Printf("%s:%s - prefers %s", senderID, employee.Name, qr.Payload)
 
 			messenger.Send(Messaging{
 				Recipient: User{
@@ -336,6 +348,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 		case "<AVAILABILITY:YES>":
 			employee.Availability = Available
 			db.SaveEmployee(employee)
+			log.Printf("%s:%s - is available", senderID, employee.Name)
 			messenger.Send(Messaging{
 				Recipient: User{
 					ID: senderID,
@@ -346,6 +359,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			})
 
 		case "<AVAILABILITY:NO>":
+			log.Printf("%s:%s - is unavailable", senderID, employee.Name)
 			messenger.Send(Messaging{
 				Recipient: User{
 					ID: senderID,
@@ -370,6 +384,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 		case "<AVAILABILITY:UNSUBSCRIBE>":
 			employee.Active = false
 			db.SaveEmployee(employee)
+			log.Printf("%s:%s - unsubscribed", senderID, employee.Name)
 			messenger.Send(Messaging{
 				Recipient: User{
 					ID: senderID,
@@ -440,6 +455,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 func checkAvailability(roster *Roster, db *Storage, messenger *Messenger) {
 	roster.SetAvailabilityAll(Unavailable)
+	log.Printf("Running checkAvailability")
 	for _, employee := range roster.Employees {
 		if employee.Availability == Unavailable {
 			employee.Availability = Unknown
@@ -471,27 +487,26 @@ func checkAvailability(roster *Roster, db *Storage, messenger *Messenger) {
 
 // Send notifications to the pairs
 func notifyPairs(matches [][]*Employee, messenger *Messenger) {
-	for i, pairs := range matches {
-
-		log.Printf("pairs %2d\n", i)
-		log.Printf("%s(%s):%s(%s)\n", pairs[0].Name, pairs[0].ID, pairs[1].Name, pairs[1].ID)
+	log.Printf("Running notifyPairs")
+	for _, pair := range matches {
+		log.Printf("%s:%s - matched with - %s:%s", pair[0].ID, pair[0].Name, pair[1].ID, pair[1].Name)
 
 		go messenger.Send(Messaging{
 			MessagingType: MessagingTypeUpdate,
 			Recipient: User{
-				ID: pairs[0].ID,
+				ID: pair[0].ID,
 			},
 			Message: &Message{
-				Text: fmt.Sprintf("Hi %s. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[0].FirstName, pairs[1].Name),
+				Text: fmt.Sprintf("Hi %s. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pair[0].FirstName, pair[1].Name),
 			},
 		})
 
 		go messenger.Send(Messaging{
 			Recipient: User{
-				ID: pairs[1].ID,
+				ID: pair[1].ID,
 			},
 			Message: &Message{
-				Text: fmt.Sprintf("Hi %s. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[1].FirstName, pairs[0].Name),
+				Text: fmt.Sprintf("Hi %s. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pair[1].FirstName, pair[0].Name),
 			},
 		})
 	}

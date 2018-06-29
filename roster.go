@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"sort"
+	"fmt"
+	"log"
 	"time"
 )
 
@@ -52,6 +53,7 @@ func (r *Roster) GetByID(id string) (*Employee, bool) {
 }
 
 func (r *Roster) GetMatches() [][]*Employee {
+	log.Printf("Running GetMatches")
 	groups := make(map[OfficeGroup][]*Employee)
 
 	for _, e := range r.Employees {

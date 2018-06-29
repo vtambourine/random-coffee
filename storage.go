@@ -65,11 +65,11 @@ func (s *Storage) GetEmployeeId(workplaceId string) int {
 }
 
 func (s *Storage) SaveEmployee(employee *Employee) {
-	stmt, err := s.Connection.Prepare("INSERT OR REPLACE INTO employee (workplace_id, name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?)")
+	stmt, err := s.Connection.Prepare("INSERT OR REPLACE INTO employee (workplace_id, name, first_name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}
-	_, err = stmt.Exec(employee.ID, employee.Name, employee.PreferredLocation, employee.Availability, employee.Active)
+	_, err = stmt.Exec(employee.ID, employee.Name, employee.FirstName, employee.PreferredLocation, employee.Availability, employee.Active)
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}

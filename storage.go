@@ -28,9 +28,35 @@ func (s *Storage) Init(filename string) {
 	}
 }
 
-func (s *Storage) GetEmployeeId(ID string) int {
+func (s *Storage) GetEmployee(rowId int) *Employee {
 	var id int
-	err := s.Connection.QueryRow("SELECT id FROM employee WHERE workplace_id=?", ID).Scan(&id)
+	var workplaceId string
+	var name string
+	var firstName string
+	var preferredLocation string
+	var availability int
+	var active int
+	err := s.Connection.QueryRow("SELECT * FROM employee WHERE id=?", rowId).
+		Scan(&id, &workplaceId, &name, &firstName, &preferredLocation, &availability, &active)
+	if err != nil {
+		return &Employee{}
+	} else {
+		currentEmployee := &Employee{
+			ID:                workplaceId,
+			Name:              name,
+			FirstName:         firstName,
+			PreferredLocation: OfficeGroup(preferredLocation),
+			Availability:      Availability(availability),
+			Active:            active != 0,
+			Oldie:             true,
+		}
+		return currentEmployee
+	}
+}
+
+func (s *Storage) GetEmployeeId(workplaceId string) int {
+	var id int
+	err := s.Connection.QueryRow("SELECT id FROM employee WHERE workplace_id=?", workplaceId).Scan(&id)
 	if err != nil {
 		return 0
 	} else {
@@ -39,11 +65,11 @@ func (s *Storage) GetEmployeeId(ID string) int {
 }
 
 func (s *Storage) SaveEmployee(employee *Employee) {
-	stmt, err := s.Connection.Prepare("INSERT OR REPLACE INTO employee (workplace_id, name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?)")
+	stmt, err := s.Connection.Prepare("INSERT OR REPLACE INTO employee (workplace_id, name, first_name, preferred_location, availability, active) VALUES(?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}
-	_, err = stmt.Exec(employee.ID, employee.Name, employee.PreferredLocation, employee.Availability, employee.Active)
+	_, err = stmt.Exec(employee.ID, employee.Name, employee.FirstName, employee.PreferredLocation, employee.Availability, employee.Active)
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}
@@ -51,34 +77,63 @@ func (s *Storage) SaveEmployee(employee *Employee) {
 
 func (s *Storage) GetAllEmployees() map[string]*Employee {
 	employees := make(map[string]*Employee)
-	rows, err := s.Connection.Query("SELECT * FROM employee")
+	dbEmployees, err := s.Connection.Query("SELECT * FROM employee")
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 		return employees
 	}
-	defer rows.Close()
-	for rows.Next() {
+	defer dbEmployees.Close()
+	for dbEmployees.Next() {
 		var id int
 		var workplaceId string
 		var name string
+		var firstName string
 		var preferredLocation string
 		var availability int
 		var active int
-		_ = rows.Scan(&id, &workplaceId, &name, &preferredLocation, &availability, &active)
-		employees[workplaceId] = &Employee{
+		_ = dbEmployees.Scan(&id, &workplaceId, &name, &firstName, &preferredLocation, &availability, &active)
+		currentEmployee := &Employee{
 			ID:                workplaceId,
 			Name:              name,
+			FirstName:         firstName,
 			PreferredLocation: OfficeGroup(preferredLocation),
 			Availability:      Availability(availability),
 			Active:            active != 0,
 			Oldie:             true,
 		}
+		dbMatchesForEmployee, err := s.Connection.Query("SELECT match1_id, match2_id, created_at, happened FROM matches WHERE match1_id = ? OR match2_id = ?", id, id)
+		if err != nil {
+			log.Printf("[DATABASE ERROR] %v", err)
+		}
+		var matches Matches
+		for dbMatchesForEmployee.Next() {
+			var match1Id int
+			var match2Id int
+			var createdAt time.Time
+			var happened MatchStatus
+			_ = dbEmployees.Scan(&match1Id, &match2Id, &createdAt, &happened)
+			colleagueId := match1Id
+			if id == match1Id {
+				colleagueId = match2Id
+			}
+			colleague := s.GetEmployee(colleagueId)
+
+			pair := []*Employee{currentEmployee, colleague}
+			match := Match{
+				Pair:     pair,
+				Time:     createdAt,
+				Happened: MatchStatus(happened),
+			}
+			matches = append(matches, match)
+		}
+		currentEmployee.Matches = matches
+		employees[workplaceId] = currentEmployee
 	}
 	return employees
 }
 
 func (s *Storage) SaveMatch(match *Match) {
-	stmt, err := s.Connection.Prepare("INSERT INTO matches (match_id_1, match_id_2, created_at, happened) VALUES(?, ?, ?, ?)")
+	stmt, err := s.Connection.Prepare("INSERT INTO matches (match1_id, match2_id, created_at, happened) VALUES(?, ?, ?, ?)")
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}

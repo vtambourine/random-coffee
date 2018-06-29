@@ -3,6 +3,8 @@ package main
 import (
 	"sort"
 	"fmt"
+	"log"
+	"time"
 )
 
 type Roster struct {
@@ -51,6 +53,7 @@ func (r *Roster) GetByID(id string) (*Employee, bool) {
 }
 
 func (r *Roster) GetMatches() [][]*Employee {
+	log.Printf("Running GetMatches")
 	groups := make(map[OfficeGroup][]*Employee)
 
 	for _, e := range r.Employees {
@@ -74,16 +77,27 @@ func (r *Roster) GetMatches() [][]*Employee {
 				if e2.Availability == Available && !(e2.Matches.wasMatchedWithBefore(e)) {
 					fmt.Printf("%v match %v\n", e, e2)
 					e.Availability = Matched
+					r.db.SaveEmployee(e)
 					e2.Availability = Matched
+					r.db.SaveEmployee(e2)
 					pair := []*Employee{e, e2}
 					matches = append(matches, pair)
+
+					match := Match{
+						Pair:     pair,
+						Time:     time.Now(),
+						Happened: MatchUnknown,
+					}
+					r.db.SaveMatch(&match)
+
+					pair[0].Matches = append(pair[0].Matches, match)
+					pair[1].Matches = append(pair[1].Matches, match)
+
 					break
 				}
 			}
 		}
 	}
-
-	r.db.SaveAllMatches(matches)
 
 	return matches
 }

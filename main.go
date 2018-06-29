@@ -2,20 +2,20 @@ package main
 
 import (
 	"fmt"
+	"github.com/natefinch/lumberjack"
+	"github.com/robfig/cron"
 	"log"
 	"math/rand"
 	"os"
-	"github.com/robfig/cron"
-	"github.com/natefinch/lumberjack"
 )
 
 var scheduler chan string
 
 func main() {
 	log.SetOutput(&lumberjack.Logger{
-		Filename:   "./rc.log",
-		MaxSize:    100, // megabytes
-		MaxAge:     28, //days
+		Filename: "./rc.log",
+		MaxSize:  100, // megabytes
+		MaxAge:   28,  //days
 	})
 
 	log.Println("Random Coffee initialized")
@@ -227,7 +227,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				})
 
 			case "UNSUBSCRIBE_PAYLOAD":
-				log.Printf("%s:%s - unsubscribed %s", senderID, employee.Name)
+				log.Printf("%s:%s - unsubscribed", senderID, employee.Name)
 				if employee.Active {
 					messenger.SendMessage(Messaging{
 						Recipient: User{
@@ -283,6 +283,27 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 								ContentType: "text",
 								Title:       string(Zuid),
 								Payload:     string(Zuid),
+							},
+						},
+					},
+				})
+			case "CHANGE_AVAILABILITY_PAYLOAD":
+				messenger.SendMessage(Messaging{
+					Recipient: User{
+						ID: senderID,
+					},
+					Message: &Message{
+						Text: fmt.Sprintf("Are you available to grab a coffee with someone today?"),
+						QuickReplies: &[]QuickReply{
+							{
+								ContentType: "text",
+								Title:       "Yes",
+								Payload:     "<AVAILABILITY:YES>",
+							},
+							{
+								ContentType: "text",
+								Title:       "Not today",
+								Payload:     "<AVAILABILITY:NO>",
 							},
 						},
 					},

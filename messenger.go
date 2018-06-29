@@ -187,16 +187,23 @@ func (m *Messenger) Send(message Messaging) {
 
 	client := &http.Client{}
 
-	//go func() {
-	//	<-m.stream
-
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	//}()
+}
+
+func (m *Messenger) SendMessage(messaging Messaging) {
+	m.Send(Messaging{
+		Recipient: User{
+			ID: messaging.Recipient.ID,
+		},
+		SendingAction: typingOff,
+	})
+
+	m.Send(messaging)
 }
 
 type Member struct {

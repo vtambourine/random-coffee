@@ -159,7 +159,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				if employee.IsAdmin() {
 					scheduler <- p
 				} else {
-					messenger.Send(Messaging{
+					messenger.SendMessage(Messaging{
 						Recipient: User{
 							ID: senderID,
 						},
@@ -175,7 +175,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			switch p {
 			case "SUBSCRIBE_PAYLOAD":
 				if employee.Active {
-					messenger.Send(Messaging{
+					messenger.SendMessage(Messaging{
 						Recipient: User{
 							ID: senderID,
 						},
@@ -190,7 +190,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				fallthrough
 			case "GET_STARTED_PAYLOAD":
 				log.Printf("%s:%s - subscribed", senderID, employee.Name)
-				messenger.Send(Messaging{
+				messenger.SendMessage(Messaging{
 					Recipient: User{
 						ID: senderID,
 					},
@@ -231,7 +231,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				db.SaveEmployee(employee)
 				log.Printf("%s:%s - unsubscribed %s", senderID, employee.Name)
 				if employee.Active {
-					messenger.Send(Messaging{
+					messenger.SendMessage(Messaging{
 						Recipient: User{
 							ID: senderID,
 						},
@@ -240,7 +240,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 						},
 					})
 				} else {
-					messenger.Send(Messaging{
+					messenger.SendMessage(Messaging{
 						Recipient: User{
 							ID: senderID,
 						},
@@ -252,7 +252,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				return
 
 			case "CHANGE_LOCATION_PAYLOAD":
-				messenger.Send(Messaging{
+				messenger.SendMessage(Messaging{
 					Recipient: User{
 						ID: senderID,
 					},
@@ -313,7 +313,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			db.SaveEmployee(employee)
 			log.Printf("%s:%s - prefers %s", senderID, employee.Name, qr.Payload)
 
-			messenger.Send(Messaging{
+			messenger.SendMessage(Messaging{
 				Recipient: User{
 					ID: senderID,
 				},
@@ -331,7 +331,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			employee.Availability = Available
 			db.SaveEmployee(employee)
 			log.Printf("%s:%s - is available", senderID, employee.Name)
-			messenger.Send(Messaging{
+			messenger.SendMessage(Messaging{
 				Recipient: User{
 					ID: senderID,
 				},
@@ -342,7 +342,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 		case "<AVAILABILITY:NO>":
 			log.Printf("%s:%s - is unavailable", senderID, employee.Name)
-			messenger.Send(Messaging{
+			messenger.SendMessage(Messaging{
 				Recipient: User{
 					ID: senderID,
 				},
@@ -367,7 +367,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			employee.Active = false
 			db.SaveEmployee(employee)
 			log.Printf("%s:%s - unsubscribed", senderID, employee.Name)
-			messenger.Send(Messaging{
+			messenger.SendMessage(Messaging{
 				Recipient: User{
 					ID: senderID,
 				},
@@ -377,62 +377,6 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			})
 		}
 	}
-
-	if qr != nil {
-		return
-	}
-
-	// If user doesn;t have preferred location
-	if len(employee.PreferredLocation) == 0 {
-		messenger.Send(Messaging{
-			Recipient: User{
-				ID: senderID,
-			},
-			Message: &Message{
-				Text: "",
-				QuickReplies: &[]QuickReply{
-					{
-						ContentType: "text",
-						Title:       string(Rembrandtplein),
-						Payload:     string(Rembrandtplein),
-					},
-					{
-						ContentType: "text",
-						Title:       string(Vijzelstraat),
-						Payload:     string(Vijzelstraat),
-					},
-					{
-						ContentType: "text",
-						Title:       string(PietHeinkade),
-						Payload:     string(PietHeinkade),
-					},
-					{
-						ContentType: "text",
-						Title:       string(Sloterdijk),
-						Payload:     string(Sloterdijk),
-					},
-					{
-						ContentType: "text",
-						Title:       string(Zuid),
-						Payload:     string(Zuid),
-					},
-				},
-			},
-		})
-	}
-
-	// If user have preferred location (and other condition might apply)
-	//if len(employee.PreferredLocation) > 0 {
-	//	messenger.Send(Messaging{
-	//		Recipient: User{
-	//			ID: senderID,
-	//		},
-	//		Message: &Message{
-	//			Text: fmt.Sprintf("Great! I’m going to grind some beans and I’ll get back to you with a match shortly."),
-	//		},
-	//	})
-	//	return
-	//}
 }
 
 func checkAvailability(roster *Roster, db *Storage, messenger *Messenger) {
@@ -442,7 +386,7 @@ func checkAvailability(roster *Roster, db *Storage, messenger *Messenger) {
 		if employee.Availability == Unavailable {
 			employee.Availability = Unknown
 			db.SaveEmployee(employee)
-			go messenger.Send(Messaging{
+			go messenger.SendMessage(Messaging{
 				MessagingType: "UPDATE",
 				Recipient: User{
 					ID: employee.ID,
@@ -473,7 +417,7 @@ func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 	for _, pair := range matches {
 		log.Printf("%s:%s - matched with - %s:%s", pair[0].ID, pair[0].Name, pair[1].ID, pair[1].Name)
 
-		go messenger.Send(Messaging{
+		go messenger.SendMessage(Messaging{
 			MessagingType: MessagingTypeUpdate,
 			Recipient: User{
 				ID: pair[0].ID,
@@ -483,7 +427,7 @@ func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 			},
 		})
 
-		go messenger.Send(Messaging{
+		go messenger.SendMessage(Messaging{
 			Recipient: User{
 				ID: pair[1].ID,
 			},

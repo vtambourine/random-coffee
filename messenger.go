@@ -33,14 +33,18 @@ type Event struct {
 	} `json:"entry,omitempty"`
 }
 
+type MessagingType string
+
+const MessagingTypeUpdate MessagingType = "UPDATE"
+
 type Messaging struct {
-	MessagingType string    `json:"messaging_type,omitempty"`
-	Sender        User      `json:"sender,omitempty"`
-	Recipient     User      `json:"recipient,omitempty"`
-	Timestamp     int       `json:"timestamp,omitempty"`
-	Message       *Message  `json:"message,omitempty"`
-	SendingAction string    `json:"sender_action,omitempty"`
-	Postback      *Postback `json:"postback,omitempty"`
+	MessagingType MessagingType `json:"messaging_type,omitempty"`
+	Sender        User          `json:"sender,omitempty"`
+	Recipient     User          `json:"recipient,omitempty"`
+	Timestamp     int           `json:"timestamp,omitempty"`
+	Message       *Message      `json:"message,omitempty"`
+	SendingAction string        `json:"sender_action,omitempty"`
+	Postback      *Postback     `json:"postback,omitempty"`
 }
 
 type User struct {

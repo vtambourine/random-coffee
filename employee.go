@@ -2,6 +2,10 @@ package main
 
 import "time"
 
+var admins = []string{
+	"1753630914744347", // Benjamin Tambourine
+}
+
 type Office string
 
 const (
@@ -86,6 +90,15 @@ func (e *Employee) wasMatchedToday() bool {
 }
 
 func (e *Employee) MatchedThisWeek() bool {
+	return false
+}
+
+func (e *Employee) IsAdmin() bool {
+	for _, id := range admins {
+		if e.ID == id {
+			return true
+		}
+	}
 	return false
 }
 

@@ -8,18 +8,10 @@ import (
 	"time"
 )
 
-var offices = []Office{AMS3, AMS9, AMS10, AMS11, AMS14, AMS15, AMS16, AMS17, AMS22}
-
 var scheduler chan string
 
 func main() {
 	log.Println("Random Coffee initialized")
-
-	db := NewStorage()
-	db.Init("./storage.db")
-	defer db.Connection.Close()
-
-	scheduler = make(chan string)
 
 	accessToken := os.Getenv("PAGE_ACCESS_TOKEN")
 	verifyToken := os.Getenv("VERIFY_TOKEN")
@@ -31,12 +23,24 @@ func main() {
 		panic("no VERIFY_TOKEN environment variable")
 	}
 
-	addr := "127.0.0.1:80"
-	msngr := NewMessenger(accessToken, verifyToken)
+	var port string
+	if port = os.Getenv("PORT"); len(port) == 0 {
+		port = "3000"
+	}
 
-	go msngr.Start(addr)
-
+	// Run server
+	addr := fmt.Sprintf("127.0.0.1:%s", port)
+	messenger := NewMessenger(accessToken, verifyToken)
+	go messenger.Start(addr)
 	log.Printf("started at %s\n", addr)
+
+	// Create new data storage
+	db := NewStorage()
+	db.Init("./storage.db")
+	defer db.Connection.Close()
+
+	// Create new scheduler channel to trigger weekly events
+	scheduler = make(chan string)
 
 	roster := NewRoster(db)
 
@@ -61,18 +65,32 @@ func main() {
 		roster.Add(e)
 	}
 
-	for _, emp := range roster.Employees {
-		fmt.Printf("%v in %s\n", emp.Name, emp.PreferredLocation)
-	}
-
+	// Start listen to new messages ot the bot
 	go func() {
 		for {
 			select {
-			case m := <-msngr.C:
-				go processMessage(m, msngr, roster, db)
+			case m := <-messenger.C:
+				go processMessage(m, messenger, roster, db)
 			}
 		}
 	}()
+
+	for {
+		select {
+		case event := <-scheduler:
+			log.Println(event)
+			switch event {
+			case "TRIGGER_AVAILABILITY":
+				checkAvailability(roster, messenger)
+
+			case "TRIGGER_MATCH":
+				notifyPairs(roster.GetMatches(), messenger)
+			}
+		}
+	}
+
+	wednesdayMorning := time.After(3 * time.Second)
+	//wednesdayAfternoon := time.NewTicker(20 * time.Second)
 
 	// Ticker
 
@@ -81,88 +99,16 @@ func main() {
 
 	for {
 		select {
-		case event := <-scheduler:
-			log.Println(event)
-			switch event {
-			case "AVA":
-				roster.SetAvailabilityAll(Unavailable)
-				for _, e := range roster.Employees {
-					if e.Availability == Unavailable {
-						e.Availability = Unknown
-						go msngr.Send(Messaging{
-							MessagingType: "UPDATE",
-							Recipient: User{
-								ID: e.ID,
-							},
-							Message: &Message{
-								Text: fmt.Sprintf("Good morning %s! Are you available to grab a coffee with someone today?", e.Name),
-								QuickReplies: &[]QuickReply{
-									{
-										ContentType: "text",
-										Title:       "Yes",
-										Payload:     "<AVAILABILITY:YES>",
-									},
-									{
-										ContentType: "text",
-										Title:       "Not today",
-										Payload:     "<AVAILABILITY:NO>",
-									},
-								},
-							},
-						})
-					}
-				}
-
-			case "PAIR":
-				notifyPairs(roster.GetMatches(), msngr)
-			}
-		}
-	}
-
-	wednesdayMorning := time.After(3 * time.Second)
-	//wednesdayAfternoon := time.NewTicker(20 * time.Second)
-
-	for {
-		select {
 		//case <-done:
 		//	fmt.Println("Done!")
 		//	return
 		//case <-ticker.C:
 		case <-time.After(15 * time.Second):
-			notifyPairs(roster.GetMatches(), msngr)
+			//notifyPairs(roster.GetMatches(), messenger)
 
 		// This should happen every Wednesday morning
 		case <-wednesdayMorning:
-			log.Println("\nROSTOER\n")
-			roster.SetAvailabilityAll(Unavailable)
-
-			for _, e := range roster.Employees {
-				log.Printf("Sending to %s\n", e.ID)
-				if e.Availability == Unavailable {
-					e.Availability = Unknown
-					go msngr.Send(Messaging{
-						Recipient: User{
-							ID: e.ID,
-						},
-						Message: &Message{
-							Text: fmt.Sprintf("Good morning %s! Are you available to grab a coffee with someone today?", e.Name),
-							QuickReplies: &[]QuickReply{
-								{
-									ContentType: "text",
-									Title:       "Yes",
-									Payload:     "<AVAILABILITY:YES>",
-								},
-								{
-									ContentType: "text",
-									Title:       "Not today",
-									Payload:     "<AVAILABILITY:NO>",
-								},
-							},
-						},
-					})
-				}
-			}
-
+			// check availability
 		default:
 			// do nothing
 		}
@@ -175,10 +121,6 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
 		m := messenger.GetMember(senderID)
-
-		log.Printf("received memeber %#v", m)
-
-
 		employee = &Employee{
 			ID:           senderID,
 			Name:         m.Name,
@@ -190,13 +132,29 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 	if m.Postback != nil {
 		if p := m.Postback.Payload; len(p) > 0 {
-			switch p {
-			case "AVA":
-				fallthrough
-			case "PAIR":
-				scheduler <- p
-				return
 
+			// Handle cheat codes
+			switch p {
+			case "TRIGGER_MATCH":
+				fallthrough
+			case "TRIGGER_AVAILABILITY":
+				if employee.IsAdmin() {
+					scheduler <- p
+				} else {
+					messenger.Send(Messaging{
+						Recipient: User{
+							ID: senderID,
+						},
+						Message: &Message{
+							Text: "DANGER ZONE. ADMINS ONLY",
+						},
+					})
+				}
+				return
+			}
+
+			// Handle other payload
+			switch p {
 			case "GET_STARTED_PAYLOAD":
 				messenger.Send(Messaging{
 					Recipient: User{
@@ -206,11 +164,9 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 						Text: fmt.Sprintf("Hey %s, I hope you’re having a great day! I’m here to find a random colleague for you to grab a coffee with.", employee.Name),
 					},
 				})
-				employee.Oldie = true
 
 			case "<ACTION:UNSUBSCRIBE>":
 				employee.Active = false
-				employee.Oldie = false
 				messenger.Send(Messaging{
 					Recipient: User{
 						ID: senderID,
@@ -220,27 +176,46 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 					},
 				})
 				return
+
+			case "CHANGE_LOCATION_PAYLOAD":
+				messenger.Send(Messaging{
+					Recipient: User{
+						ID: senderID,
+					},
+					Message: &Message{
+						Text: "Which office are you in?",
+						QuickReplies: &[]QuickReply{
+							{
+								ContentType: "text",
+								Title:       string(Rembrandtplein),
+								Payload:     string(Rembrandtplein),
+							},
+							{
+								ContentType: "text",
+								Title:       string(Vijzelstraat),
+								Payload:     string(Vijzelstraat),
+							},
+							{
+								ContentType: "text",
+								Title:       string(PietHeinkade),
+								Payload:     string(PietHeinkade),
+							},
+							{
+								ContentType: "text",
+								Title:       string(Sloterdijk),
+								Payload:     string(Sloterdijk),
+							},
+							{
+								ContentType: "text",
+								Title:       string(Zuid),
+								Payload:     string(Zuid),
+							},
+						},
+					},
+				})
 			}
-
-
 		}
 	}
-
-	log.Printf("recieved message from: %s", senderID)
-	log.Printf("before process:\n%#v", *employee)
-
-	// If user contact bot for the first time, greet him
-	//if !employee.Oldie {
-	//	messenger.Send(Messaging{
-	//		Recipient: User{
-	//			ID: senderID,
-	//		},
-	//		Message: &Message{
-	//			Text: fmt.Sprintf("Hey %s, I hope you’re having a great day! I’m here to find a random colleague for you to grab a coffee with.", employee.Name),
-	//		},
-	//	})
-	//	employee.Oldie = true
-	//}
 
 	var qr *QuickReply
 
@@ -312,7 +287,6 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 		case "<AVAILABILITY:UNSUBSCRIBE>":
 			employee.Active = false
-			employee.Oldie = false
 			messenger.Send(Messaging{
 				Recipient: User{
 					ID: senderID,
@@ -368,34 +342,66 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 	}
 
 	// If user have preferred location (and other condition might apply)
-	if len(employee.PreferredLocation) > 0 {
-		messenger.Send(Messaging{
-			Recipient: User{
-				ID: senderID,
-			},
-			Message: &Message{
-				Text: fmt.Sprintf("Great! I’m going to grind some beans and I’ll get back to you with a match shortly."),
-			},
-		})
-		return
+	//if len(employee.PreferredLocation) > 0 {
+	//	messenger.Send(Messaging{
+	//		Recipient: User{
+	//			ID: senderID,
+	//		},
+	//		Message: &Message{
+	//			Text: fmt.Sprintf("Great! I’m going to grind some beans and I’ll get back to you with a match shortly."),
+	//		},
+	//	})
+	//	return
+	//}
+}
+
+func checkAvailability(roster *Roster, messenger *Messenger) {
+	roster.SetAvailabilityAll(Unavailable)
+	for _, employee := range roster.Employees {
+		if employee.Availability == Unavailable {
+			employee.Availability = Unknown
+			go messenger.Send(Messaging{
+				MessagingType: "UPDATE",
+				Recipient: User{
+					ID: employee.ID,
+				},
+				Message: &Message{
+					Text: fmt.Sprintf("Good morning %s! Are you available to grab a coffee with someone today?", employee.Name),
+					QuickReplies: &[]QuickReply{
+						{
+							ContentType: "text",
+							Title:       "Yes",
+							Payload:     "<AVAILABILITY:YES>",
+						},
+						{
+							ContentType: "text",
+							Title:       "Not today",
+							Payload:     "<AVAILABILITY:NO>",
+						},
+					},
+				},
+			})
+		}
 	}
 }
 
 // Send notifications to the pairs
 func notifyPairs(matches [][]*Employee, messenger *Messenger) {
-	for _, pairs := range matches {
-		fmt.Println("== Pair ==")
-
+	for i, pairs := range matches {
 		match := Match{
 			Pair: pairs,
 			Time: time.Now(),
 			Happened: MatchHappened,
 		}
 
+		log.Printf("pairs %2d\n", i)
+		log.Printf("%s(%s):%s(%s)\n", pairs[0].Name, pairs[0].ID, pairs[1].Name, pairs[1].ID)
+
 		pairs[0].Matches = append(pairs[0].Matches, match)
 		pairs[1].Matches = append(pairs[1].Matches, match)
 
 		go messenger.Send(Messaging{
+			MessagingType: MessagingTypeUpdate,
 			Recipient: User{
 				ID: pairs[0].ID,
 			},
@@ -409,15 +415,8 @@ func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 				ID: pairs[1].ID,
 			},
 			Message: &Message{
-				Text: fmt.Sprintf(" Perfect. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[0].Name),
+				Text: fmt.Sprintf("Perfect. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[0].Name),
 			},
 		})
-
-		for _, p := range pairs {
-			fmt.Printf("%s : %v\n", p.Name, p.ID)
-
-		}
-
-		fmt.Println()
 	}
 }

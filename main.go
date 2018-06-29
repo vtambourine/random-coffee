@@ -92,7 +92,7 @@ func main() {
 			log.Println(event)
 			switch event {
 			case "TRIGGER_AVAILABILITY":
-				checkAvailability(roster, messenger)
+				checkAvailability(roster, db, messenger)
 
 			case "TRIGGER_MATCH":
 				notifyPairs(roster.GetMatches(), messenger)
@@ -132,6 +132,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
 		m := messenger.GetMember(senderID)
+
 		employee = &Employee{
 			ID:           senderID,
 			Name:         m.Name,
@@ -235,6 +236,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 			case "UNSUBSCRIBE_PAYLOAD":
 				employee.Active = false
+				db.SaveEmployee(employee)
 				if employee.Active {
 					messenger.Send(Messaging{
 						Recipient: User{
@@ -332,7 +334,8 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 	if qr != nil {
 		switch qr.Payload {
 		case "<AVAILABILITY:YES>":
-			(*employee).Availability = Available
+			employee.Availability = Available
+			db.SaveEmployee(employee)
 			messenger.Send(Messaging{
 				Recipient: User{
 					ID: senderID,
@@ -366,6 +369,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 		case "<AVAILABILITY:UNSUBSCRIBE>":
 			employee.Active = false
+			db.SaveEmployee(employee)
 			messenger.Send(Messaging{
 				Recipient: User{
 					ID: senderID,
@@ -434,11 +438,12 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 	//}
 }
 
-func checkAvailability(roster *Roster, messenger *Messenger) {
+func checkAvailability(roster *Roster, db *Storage, messenger *Messenger) {
 	roster.SetAvailabilityAll(Unavailable)
 	for _, employee := range roster.Employees {
 		if employee.Availability == Unavailable {
 			employee.Availability = Unknown
+			db.SaveEmployee(employee)
 			go messenger.Send(Messaging{
 				MessagingType: "UPDATE",
 				Recipient: User{

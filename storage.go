@@ -32,17 +32,19 @@ func (s *Storage) GetEmployee(rowId int) *Employee {
 	var id int
 	var workplaceId string
 	var name string
+	var firstName string
 	var preferredLocation string
 	var availability int
 	var active int
 	err := s.Connection.QueryRow("SELECT * FROM employee WHERE id=?", rowId).
-		Scan(&id, &workplaceId, &name, &preferredLocation, &availability, &active)
+		Scan(&id, &workplaceId, &name, &firstName, &preferredLocation, &availability, &active)
 	if err != nil {
 		return &Employee{}
 	} else {
 		currentEmployee := &Employee{
 			ID:                workplaceId,
 			Name:              name,
+			FirstName:         firstName,
 			PreferredLocation: OfficeGroup(preferredLocation),
 			Availability:      Availability(availability),
 			Active:            active != 0,
@@ -85,13 +87,15 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 		var id int
 		var workplaceId string
 		var name string
+		var firstName string
 		var preferredLocation string
 		var availability int
 		var active int
-		_ = dbEmployees.Scan(&id, &workplaceId, &name, &preferredLocation, &availability, &active)
+		_ = dbEmployees.Scan(&id, &workplaceId, &name, &firstName, &preferredLocation, &availability, &active)
 		currentEmployee := &Employee{
 			ID:                workplaceId,
 			Name:              name,
+			FirstName:         firstName,
 			PreferredLocation: OfficeGroup(preferredLocation),
 			Availability:      Availability(availability),
 			Active:            active != 0,

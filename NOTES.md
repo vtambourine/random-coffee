@@ -5,19 +5,24 @@
       "composer_input_disabled": true,
       "call_to_actions":[
         {
-              "title":"Previous matches",
-              "type":"postback",
-              "payload":"GET_PREVIOUS_MATCHES"
-        },
-        {
           "title":"Preferences",
           "type":"nested",
           "call_to_actions":[
+          	{
+              "title":"Check availability status",
+              "type":"postback",
+              "payload":"CHECK_AVAILABILITY"
+        	},
              {
               "title":"Change location preference",
               "type":"postback",
               "payload":"CHANGE_LOCATION_PAYLOAD"
             },
+            {
+              "title":"Rules",
+              "type":"postback",
+              "payload":"GET_RULES"
+        	},
             {
               "title":"Subscribe",
               "type":"postback",
@@ -27,22 +32,6 @@
               "title":"Unsubscribe",
               "type":"postback",
               "payload":"UNSUBSCRIBE_PAYLOAD"
-            }
-          ]
-        },
-       {
-          "title":"Cheat Codes",
-          "type":"nested",
-          "call_to_actions":[
-            {
-              "title":"⬇︎︎⬆︎",
-              "type":"postback",
-              "payload":"TRIGGER_AVAILABILITY"
-            },
-            {
-              "title":"⬅︎⬆︎",
-              "type":"postback",
-              "payload":"TRIGGER_MATCH"
             }
           ]
         }

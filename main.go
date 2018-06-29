@@ -89,6 +89,7 @@ func main() {
 				for _, e := range roster.Employees {
 					if e.Availability == Unavailable {
 						e.Availability = Unknown
+						db.SaveEmployee(e)
 						go msngr.Send(Messaging{
 							MessagingType: "UPDATE",
 							Recipient: User{
@@ -140,6 +141,7 @@ func main() {
 				log.Printf("Sending to %s\n", e.ID)
 				if e.Availability == Unavailable {
 					e.Availability = Unknown
+					db.SaveEmployee(e)
 					go msngr.Send(Messaging{
 						Recipient: User{
 							ID: e.ID,
@@ -178,12 +180,11 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 		log.Printf("received memeber %#v", m)
 
-
 		employee = &Employee{
 			ID:           senderID,
 			Name:         m.Name,
 			Availability: Unavailable,
-			Active: true,
+			Active:       true,
 		}
 		roster.Add(employee)
 	}
@@ -207,10 +208,12 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 					},
 				})
 				employee.Oldie = true
+				db.SaveEmployee(employee)
 
 			case "<ACTION:UNSUBSCRIBE>":
 				employee.Active = false
 				employee.Oldie = false
+				db.SaveEmployee(employee)
 				messenger.Send(Messaging{
 					Recipient: User{
 						ID: senderID,
@@ -221,7 +224,6 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				})
 				return
 			}
-
 
 		}
 	}
@@ -279,6 +281,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 		switch qr.Payload {
 		case "<AVAILABILITY:YES>":
 			(*employee).Availability = Available
+			db.SaveEmployee(employee)
 			messenger.Send(Messaging{
 				Recipient: User{
 					ID: senderID,
@@ -313,6 +316,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 		case "<AVAILABILITY:UNSUBSCRIBE>":
 			employee.Active = false
 			employee.Oldie = false
+			db.SaveEmployee(employee)
 			messenger.Send(Messaging{
 				Recipient: User{
 					ID: senderID,
@@ -387,8 +391,8 @@ func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 		fmt.Println("== Pair ==")
 
 		match := Match{
-			Pair: pairs,
-			Time: time.Now(),
+			Pair:     pairs,
+			Time:     time.Now(),
 			Happened: MatchHappened,
 		}
 

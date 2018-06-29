@@ -150,27 +150,6 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 	if m.Postback != nil {
 		if p := m.Postback.Payload; len(p) > 0 {
 
-			// Handle cheat codes
-			switch p {
-			case "TRIGGER_MATCH":
-				fallthrough
-			case "TRIGGER_AVAILABILITY":
-				log.Printf("Force %s", p)
-				if employee.IsAdmin() {
-					scheduler <- p
-				} else {
-					messenger.SendMessage(Messaging{
-						Recipient: User{
-							ID: senderID,
-						},
-						Message: &Message{
-							Text: "DANGER ZONE. ADMINS ONLY",
-						},
-					})
-				}
-				return
-			}
-
 			// Handle other payload
 			switch p {
 			case "SUBSCRIBE_PAYLOAD":
@@ -287,6 +266,66 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 						},
 					},
 				})
+			case "GET_RULES":
+				if employee.IsAdmin() {
+					messenger.SendMessage(Messaging{
+						Recipient: User{
+							ID: senderID,
+						},
+						Message: &Message{
+							Text: "Admin commands",
+							QuickReplies: &[]QuickReply{
+								{
+									ContentType: "text",
+									Title:       "Send availability messages",
+									Payload:     "TRIGGER_AVAILABILITY",
+								},
+								{
+									ContentType: "text",
+									Title:       "Run matching",
+									Payload:     "TRIGGER_MATCH",
+								},
+							},
+						},
+					})
+				} else {
+					messenger.SendMessage(Messaging{
+						Recipient: User{
+							ID: senderID,
+						},
+						Message: &Message{
+							Text: "RULES PLACEHOLDER",
+						},
+					})
+				}
+			case "CHECK_AVAILABILITY":
+				var availability_status string
+				if employee.Availability == Available {
+					availability_status = "available"
+				} else {
+					availability_status = "not available"
+				}
+				messenger.SendMessage(Messaging{
+					MessagingType: "UPDATE",
+					Recipient: User{
+						ID: employee.ID,
+					},
+					Message: &Message{
+						Text: fmt.Sprintf("It seems that you are %s today. Do you want to change it?", availability_status),
+						QuickReplies: &[]QuickReply{
+							{
+								ContentType: "text",
+								Title:       "Yes ",
+								Payload:     "<AVAILABILITY:CHANGE>",
+							},
+							{
+								ContentType: "text",
+								Title:       "No",
+								Payload:     "<AVAILABILITY:NO_ACTION>",
+							},
+						},
+					},
+				})
 			}
 		}
 	}
@@ -295,6 +334,29 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 	if m.Message != nil {
 		qr = m.Message.QuickReply
+	}
+
+	// Handle cheat codes
+	if qr != nil {
+		switch qr.Payload {
+		case "TRIGGER_MATCH":
+			fallthrough
+		case "TRIGGER_AVAILABILITY":
+			log.Printf("Force %s", qr.Payload)
+			if employee.IsAdmin() {
+				scheduler <- qr.Payload
+			} else {
+				messenger.SendMessage(Messaging{
+					Recipient: User{
+						ID: senderID,
+					},
+					Message: &Message{
+						Text: "DANGER ZONE. ADMINS ONLY",
+					},
+				})
+			}
+			return
+		}
 	}
 
 	// Handle selection of preferred location
@@ -341,6 +403,8 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			})
 
 		case "<AVAILABILITY:NO>":
+			employee.Availability = Unavailable
+			db.SaveEmployee(employee)
 			log.Printf("%s:%s - is unavailable", senderID, employee.Name)
 			messenger.SendMessage(Messaging{
 				Recipient: User{
@@ -373,6 +437,29 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				},
 				Message: &Message{
 					Text: "Sorry to see you go, but if you change your mind you can click preferences and then subscribe again.",
+				},
+			})
+
+		case "<AVAILABILITY:CHANGE>":
+			messenger.SendMessage(Messaging{
+				MessagingType: "UPDATE",
+				Recipient: User{
+					ID: employee.ID,
+				},
+				Message: &Message{
+					Text: "Are you available to grab a coffee with someone today?",
+					QuickReplies: &[]QuickReply{
+						{
+							ContentType: "text",
+							Title:       "Yes",
+							Payload:     "<AVAILABILITY:YES>",
+						},
+						{
+							ContentType: "text",
+							Title:       "Not today",
+							Payload:     "<AVAILABILITY:NO>",
+						},
+					},
 				},
 			})
 		}

@@ -66,11 +66,11 @@ func main() {
 	}
 
 	//e = &Employee{
-	//	ID:                "100012012122201",
+	//	ID:                "100012152646126",
 	//	Active:            true,
 	//	Availability:      Available,
-	//	Name:              "Stefan Poschina",
-	//	FirstName:         "Stefan",
+	//	Name:              "Veniamin Kleshchenkov",
+	//	FirstName:         "Veniamin",
 	//	Oldie:             false,
 	//	PreferredLocation: Vijzelstraat,
 	//}
@@ -142,6 +142,20 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 		roster.Add(employee)
 	}
 
+	messenger.Send(Messaging{
+		Recipient: User{
+			ID: senderID,
+		},
+		SendingAction: typingOn,
+	})
+
+	defer messenger.Send(Messaging{
+		Recipient: User{
+			ID: senderID,
+		},
+		SendingAction: typingOff,
+	})
+
 	if m.Postback != nil {
 		if p := m.Postback.Payload; len(p) > 0 {
 
@@ -167,59 +181,79 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 
 			// Handle other payload
 			switch p {
-			case "GET_STARTED_PAYLOAD":
-				var loc *[]QuickReply
-
-				if len(employee.PreferredLocation) == 0 {
-					loc = &[]QuickReply{
-						{
-							ContentType: "text",
-							Title:       string(Rembrandtplein),
-							Payload:     string(Rembrandtplein),
+			case "SUBSCRIBE_PAYLOAD":
+				if employee.Active {
+					messenger.Send(Messaging{
+						Recipient: User{
+							ID: senderID,
 						},
-						{
-							ContentType: "text",
-							Title:       string(Vijzelstraat),
-							Payload:     string(Vijzelstraat),
+						Message: &Message{
+							Text: "You already subscribed.",
 						},
-						{
-							ContentType: "text",
-							Title:       string(PietHeinkade),
-							Payload:     string(PietHeinkade),
-						},
-						{
-							ContentType: "text",
-							Title:       string(Sloterdijk),
-							Payload:     string(Sloterdijk),
-						},
-						{
-							ContentType: "text",
-							Title:       string(Zuid),
-							Payload:     string(Zuid),
-						},
-					}
+					})
+					return
 				}
+				employee.Active = true
 
+				fallthrough
+			case "GET_STARTED_PAYLOAD":
 				messenger.Send(Messaging{
 					Recipient: User{
 						ID: senderID,
 					},
 					Message: &Message{
-						Text:         fmt.Sprintf("Hey %s, welcome to Random Coffee, I hope you’re having a great day! Each Wednesday at noon I’ll find a random colleague for you to grab a coffee with. All you have to do is choose which area your office is closest to.", employee.FirstName),
-						QuickReplies: loc,
+						Text: fmt.Sprintf("Hey %s, welcome to Random Coffee, I hope you’re having a great day! Each Wednesday at noon I’ll find a random colleague for you to grab a coffee with. All you have to do is choose which area your office is closest to.", employee.FirstName),
+						QuickReplies: &[]QuickReply{
+							{
+								ContentType: "text",
+								Title:       string(Rembrandtplein),
+								Payload:     string(Rembrandtplein),
+							},
+							{
+								ContentType: "text",
+								Title:       string(Vijzelstraat),
+								Payload:     string(Vijzelstraat),
+							},
+							{
+								ContentType: "text",
+								Title:       string(PietHeinkade),
+								Payload:     string(PietHeinkade),
+							},
+							{
+								ContentType: "text",
+								Title:       string(Sloterdijk),
+								Payload:     string(Sloterdijk),
+							},
+							{
+								ContentType: "text",
+								Title:       string(Zuid),
+								Payload:     string(Zuid),
+							},
+						},
 					},
 				})
 
-			case "<ACTION:UNSUBSCRIBE>":
+			case "UNSUBSCRIBE_PAYLOAD":
 				employee.Active = false
-				messenger.Send(Messaging{
-					Recipient: User{
-						ID: senderID,
-					},
-					Message: &Message{
-						Text: "Sorry to see you go, but if you change your mind you can click preferences and then subscribe again.",
-					},
-				})
+				if employee.Active {
+					messenger.Send(Messaging{
+						Recipient: User{
+							ID: senderID,
+						},
+						Message: &Message{
+							Text: "Sorry to see you go, but if you change your mind you can click preferences and then subscribe again.",
+						},
+					})
+				} else {
+					messenger.Send(Messaging{
+						Recipient: User{
+							ID: senderID,
+						},
+						Message: &Message{
+							Text: "You already unsubscribed.",
+						},
+					})
+				}
 				return
 
 			case "CHANGE_LOCATION_PAYLOAD":

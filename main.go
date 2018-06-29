@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"time"
 	"github.com/robfig/cron"
 	"github.com/natefinch/lumberjack"
 )

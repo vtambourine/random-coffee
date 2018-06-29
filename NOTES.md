@@ -5,13 +5,23 @@
       "composer_input_disabled": true,
       "call_to_actions":[
         {
+              "title":"Previous matches",
+              "type":"postback",
+              "payload":"GET_PREVIOUS_MATCHES"
+        },
+        {
           "title":"Preferences",
           "type":"nested",
           "call_to_actions":[
-            {
+             {
               "title":"Change location preference",
               "type":"postback",
               "payload":"CHANGE_LOCATION_PAYLOAD"
+            },
+            {
+              "title":"Subscribe",
+              "type":"postback",
+              "payload":"SUBSCRIBE_PAYLOAD"
             },
             {
               "title":"Unsubscribe",
@@ -20,7 +30,7 @@
             }
           ]
         },
-        {
+       {
           "title":"Cheat Codes",
           "type":"nested",
           "call_to_actions":[

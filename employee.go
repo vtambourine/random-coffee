@@ -4,6 +4,10 @@ import "time"
 
 var admins = []string{
 	"1753630914744347", // Benjamin Tambourine
+	"100012152646126",  // Benjamin Tambourine
+	"100012012122201",  // Stefan Poschina
+	"100024242914539",  // Artem Nikolenko
+	"100026519885302",  // Eric Reichbaum
 }
 
 type Office string
@@ -59,10 +63,10 @@ const (
 type Availability int
 
 const (
-	Unknown Availability = iota
-	Unavailable// Unavailable for matching this week
-	Available // Available for matching this week
-	Matched // Already matched this week
+	Unknown     Availability = iota
+	Unavailable              // Unavailable for matching this week
+	Available                // Available for matching this week
+	Matched                  // Already matched this week
 )
 
 type ConversationState int
@@ -76,6 +80,7 @@ const (
 
 type Employee struct {
 	ID                string
+	FirstName         string
 	Name              string
 	Active            bool
 	Matches           Matches

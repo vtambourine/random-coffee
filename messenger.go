@@ -200,13 +200,14 @@ func (m *Messenger) Send(message Messaging) {
 }
 
 type Member struct {
-	ID    string `json:"id,omitempty"`
-	Name  string `json:"name,omitempty"`
-	Email string `json:"email,omitempty"`
+	ID        string `json:"id,omitempty"`
+	Name      string `json:"name,omitempty"`
+	FirstName string `json:"first_name,omitempty"`
+	Email     string `json:"email,omitempty"`
 }
 
 func (m *Messenger) GetMember(id string) Member {
-	url := fmt.Sprintf("%s/%s?fields=name,email&access_token=%s", m.api, id, m.secret)
+	url := fmt.Sprintf("%s/%s?fields=name,first_name,email&access_token=%s", m.api, id, m.secret)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {

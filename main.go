@@ -54,7 +54,7 @@ func main() {
 	preferredLocations := []OfficeGroup{Rembrandtplein, Vijzelstraat, PietHeinkade, Sloterdijk, Zuid}
 
 	var e *Employee
-	for i := 0; i <= 10; i++ {
+	for i := 0; i <= 0; i++ {
 		e = &Employee{
 			ID:                fmt.Sprintf("id-%d", i),
 			Active:            true,
@@ -64,6 +64,17 @@ func main() {
 		}
 		roster.Add(e)
 	}
+
+	//e = &Employee{
+	//	ID:                "100012012122201",
+	//	Active:            true,
+	//	Availability:      Available,
+	//	Name:              "Stefan Poschina",
+	//	FirstName:         "Stefan",
+	//	Oldie:             false,
+	//	PreferredLocation: Vijzelstraat,
+	//}
+	//roster.Add(e)
 
 	// Start listen to new messages ot the bot
 	go func() {
@@ -94,17 +105,17 @@ func main() {
 
 	// Ticker
 
-	//ticker := time.NewTicker(10 * time.Second)
-	//defer ticker.Stop()
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
 		//case <-done:
 		//	fmt.Println("Done!")
 		//	return
-		//case <-ticker.C:
-		case <-time.After(15 * time.Second):
-			//notifyPairs(roster.GetMatches(), messenger)
+		case <-ticker.C:
+		//case <-time.After(15 * time.Second):
+		//notifyPairs(roster.GetMatches(), messenger)
 
 		// This should happen every Wednesday morning
 		case <-wednesdayMorning:
@@ -124,8 +135,9 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 		employee = &Employee{
 			ID:           senderID,
 			Name:         m.Name,
+			FirstName:    m.FirstName,
 			Availability: Unavailable,
-			Active: true,
+			Active:       true,
 		}
 		roster.Add(employee)
 	}
@@ -156,12 +168,45 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 			// Handle other payload
 			switch p {
 			case "GET_STARTED_PAYLOAD":
+				var loc *[]QuickReply
+
+				if len(employee.PreferredLocation) == 0 {
+					loc = &[]QuickReply{
+						{
+							ContentType: "text",
+							Title:       string(Rembrandtplein),
+							Payload:     string(Rembrandtplein),
+						},
+						{
+							ContentType: "text",
+							Title:       string(Vijzelstraat),
+							Payload:     string(Vijzelstraat),
+						},
+						{
+							ContentType: "text",
+							Title:       string(PietHeinkade),
+							Payload:     string(PietHeinkade),
+						},
+						{
+							ContentType: "text",
+							Title:       string(Sloterdijk),
+							Payload:     string(Sloterdijk),
+						},
+						{
+							ContentType: "text",
+							Title:       string(Zuid),
+							Payload:     string(Zuid),
+						},
+					}
+				}
+
 				messenger.Send(Messaging{
 					Recipient: User{
 						ID: senderID,
 					},
 					Message: &Message{
-						Text: fmt.Sprintf("Hey %s, I hope you’re having a great day! I’m here to find a random colleague for you to grab a coffee with.", employee.Name),
+						Text:         fmt.Sprintf("Hey %s, welcome to Random Coffee, I hope you’re having a great day! Each Wednesday at noon I’ll find a random colleague for you to grab a coffee with. All you have to do is choose which area your office is closest to.", employee.FirstName),
+						QuickReplies: loc,
 					},
 				})
 
@@ -172,7 +217,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 						ID: senderID,
 					},
 					Message: &Message{
-						Text: "YOU'VE BEEN UNSUBSCRIBED. SORRY TO SEE YOU GO",
+						Text: "Sorry to see you go, but if you change your mind you can click preferences and then subscribe again.",
 					},
 				})
 				return
@@ -183,7 +228,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 						ID: senderID,
 					},
 					Message: &Message{
-						Text: "Which office are you in?",
+						Text: "Which area office is closest to?",
 						QuickReplies: &[]QuickReply{
 							{
 								ContentType: "text",
@@ -292,7 +337,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 					ID: senderID,
 				},
 				Message: &Message{
-					Text: "YOU'VE BEEN UNSUBSCRBED",
+					Text: "Sorry to see you go, but if you change your mind you can click preferences and then subscribe again.",
 				},
 			})
 		}
@@ -309,7 +354,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 				ID: senderID,
 			},
 			Message: &Message{
-				Text: "Which office are you in?",
+				Text: "",
 				QuickReplies: &[]QuickReply{
 					{
 						ContentType: "text",
@@ -366,7 +411,7 @@ func checkAvailability(roster *Roster, messenger *Messenger) {
 					ID: employee.ID,
 				},
 				Message: &Message{
-					Text: fmt.Sprintf("Good morning %s! Are you available to grab a coffee with someone today?", employee.Name),
+					Text: fmt.Sprintf("Good morning %s! Are you available to grab a coffee with someone today?", employee.FirstName),
 					QuickReplies: &[]QuickReply{
 						{
 							ContentType: "text",
@@ -389,8 +434,8 @@ func checkAvailability(roster *Roster, messenger *Messenger) {
 func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 	for i, pairs := range matches {
 		match := Match{
-			Pair: pairs,
-			Time: time.Now(),
+			Pair:     pairs,
+			Time:     time.Now(),
 			Happened: MatchHappened,
 		}
 
@@ -406,7 +451,7 @@ func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 				ID: pairs[0].ID,
 			},
 			Message: &Message{
-				Text: fmt.Sprintf("Perfect. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[1].Name),
+				Text: fmt.Sprintf("Hi %s. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[0].FirstName, pairs[1].Name),
 			},
 		})
 
@@ -415,7 +460,7 @@ func notifyPairs(matches [][]*Employee, messenger *Messenger) {
 				ID: pairs[1].ID,
 			},
 			Message: &Message{
-				Text: fmt.Sprintf("Perfect. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[0].Name),
+				Text: fmt.Sprintf("Hi %s. Your match this week is %s. Shoot them a message on Workplace and organize a time to meet!", pairs[1].FirstName, pairs[0].Name),
 			},
 		})
 	}

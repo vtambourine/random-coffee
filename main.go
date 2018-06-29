@@ -13,7 +13,7 @@ var scheduler chan string
 
 func main() {
 	log.SetOutput(&lumberjack.Logger{
-		Filename:   "/home/vkleshchenko/random-coffee_logs/rc.log",
+		Filename:   "./rc.log",
 		MaxSize:    100, // megabytes
 		MaxAge:     28, //days
 	})

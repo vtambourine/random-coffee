@@ -126,9 +126,9 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 		for dbMatchesForEmployee.Next() {
 			var match1Id int
 			var match2Id int
-			var createdAt time.Time
+			var createdAt string
 			var happened MatchStatus
-			_ = dbEmployees.Scan(&match1Id, &match2Id, &createdAt, &happened)
+			_ = dbMatchesForEmployee.Scan(&match1Id, &match2Id, &createdAt, &happened)
 			colleagueId := match1Id
 			if id == match1Id {
 				colleagueId = match2Id
@@ -136,9 +136,10 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 			colleague := s.GetEmployee(colleagueId)
 
 			pair := []*Employee{currentEmployee, colleague}
+			matchedTime, _ := time.Parse(time.RFC3339, createdAt)
 			match := Match{
 				Pair:     pair,
-				Time:     createdAt,
+				Time:     matchedTime,
 				Happened: MatchStatus(happened),
 			}
 			matches = append(matches, match)
@@ -155,7 +156,7 @@ func (s *Storage) SaveMatch(match *Match) {
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}
-	_, err = stmt.Exec(s.GetEmployeeId(match.Pair[0].ID), s.GetEmployeeId(match.Pair[1].ID), match.Time, match.Happened)
+	_, err = stmt.Exec(s.GetEmployeeId(match.Pair[0].ID), s.GetEmployeeId(match.Pair[1].ID), match.Time.Format(time.RFC3339), match.Happened)
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}

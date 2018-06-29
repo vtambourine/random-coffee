@@ -1,9 +1,9 @@
 package main
 
 import (
-	"sort"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 )
 
@@ -13,10 +13,9 @@ type Roster struct {
 }
 
 func NewRoster(db *Storage) *Roster {
-	//existingEmployees := db.GetAllEmployees()
+	existingEmployees := db.GetAllEmployees()
 	return &Roster{
-		//Employees: existingEmployees,
-		Employees: make(map[string]*Employee),
+		Employees: existingEmployees,
 		db:        db,
 	}
 }

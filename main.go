@@ -111,6 +111,8 @@ func main() {
 		notifyPairs(roster.GetMatches(), messenger)
 	})
 
+	c.Start()
+
 	// Block main process
 	select {}
 }

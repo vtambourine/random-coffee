@@ -125,16 +125,18 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 	employee, ok := roster.GetByID(senderID)
 	if !ok {
 		log.Printf("checking user in roster: %s ... %v", senderID, ok)
-		m := messenger.GetMember(senderID)
+		m, err := messenger.GetMember(senderID)
 
-		employee = &Employee{
-			ID:           senderID,
-			Name:         m.Name,
-			FirstName:    m.FirstName,
-			Availability: Unavailable,
-			Active:       true,
+		if err == nil {
+			employee = &Employee{
+				ID:           senderID,
+				Name:         m.Name,
+				FirstName:    m.FirstName,
+				Availability: Unavailable,
+				Active:       true,
+			}
+			roster.Add(employee)
 		}
-		roster.Add(employee)
 	} else {
 		log.Printf("checking user in roster: %s(%s) ... %v", employee.ID, employee.Name, ok)
 	}

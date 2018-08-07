@@ -190,6 +190,7 @@ func (m *Messenger) Send(message Messaging) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 	defer resp.Body.Close()
 }
@@ -212,7 +213,7 @@ type Member struct {
 	Email     string `json:"email,omitempty"`
 }
 
-func (m *Messenger) GetMember(id string) Member {
+func (m *Messenger) GetMember(id string) (Member, error) {
 	url := fmt.Sprintf("%s/%s?fields=name,first_name,email&access_token=%s", m.api, id, m.secret)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Add("Content-Type", "application/json")
@@ -220,20 +221,22 @@ func (m *Messenger) GetMember(id string) Member {
 		log.Fatal(err)
 	}
 
+	member := new(Member)
+
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
+		return *member, err
 	}
 	defer resp.Body.Close()
 
-	member := new(Member)
 	err = json.NewDecoder(resp.Body).Decode(member)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return *member
+	return *member, nil
 }

@@ -2,9 +2,10 @@ package main
 
 import (
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Storage struct {
@@ -29,45 +30,45 @@ func (s *Storage) Init(filename string) {
 	}
 }
 
-func (s *Storage) GetEmployee(rowId int) *Employee {
+func (s *Storage) GetEmployee(rowID int) *Employee {
 	var id int
-	var workplaceId string
+	var workplaceID string
 	var name string
 	var firstName string
 	var preferredLocation string
 	var availability int
 	var active int
-	err := s.Connection.QueryRow("SELECT * FROM employee WHERE id=?", rowId).
-		Scan(&id, &workplaceId, &name, &firstName, &preferredLocation, &availability, &active)
+	err := s.Connection.QueryRow("SELECT * FROM employee WHERE id=?", rowID).
+		Scan(&id, &workplaceID, &name, &firstName, &preferredLocation, &availability, &active)
+
 	if err != nil {
 		return &Employee{}
-	} else {
-		currentEmployee := &Employee{
-			ID:                workplaceId,
-			Name:              name,
-			FirstName:         firstName,
-			PreferredLocation: OfficeGroup(preferredLocation),
-			Availability:      Availability(availability),
-			Active:            active != 0,
-			Oldie:             true,
-		}
-		return currentEmployee
 	}
+
+	currentEmployee := &Employee{
+		ID:                workplaceID,
+		Name:              name,
+		FirstName:         firstName,
+		PreferredLocation: OfficeGroup(preferredLocation),
+		Availability:      Availability(availability),
+		Active:            active != 0,
+		Oldie:             true,
+	}
+	return currentEmployee
 }
 
-func (s *Storage) GetEmployeeId(workplaceId string) int {
+func (s *Storage) GetEmployeeID(workplaceID string) int {
 	var id int
-	err := s.Connection.QueryRow("SELECT id FROM employee WHERE workplace_id=?", workplaceId).Scan(&id)
+	err := s.Connection.QueryRow("SELECT id FROM employee WHERE workplace_id=?", workplaceID).Scan(&id)
 	if err != nil {
 		return 0
-	} else {
-		return id
 	}
+	return id
 }
 
 func (s *Storage) SaveEmployee(employee *Employee) {
 	log.Printf("[STORAGE] Saving employee (%s) %s to the database", employee.ID, employee.Name)
-	id := s.GetEmployeeId(employee.ID)
+	id := s.GetEmployeeID(employee.ID)
 	if id != 0 {
 		stmt, err := s.Connection.Prepare("UPDATE employee SET workplace_id = ?, name = ?, first_name = ?, preferred_location = ?, availability = ?, active = ? WHERE id = ?")
 		if err != nil {
@@ -101,15 +102,15 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 	defer dbEmployees.Close()
 	for dbEmployees.Next() {
 		var id int
-		var workplaceId string
+		var workplaceID string
 		var name string
 		var firstName string
 		var preferredLocation string
 		var availability int
 		var active int
-		_ = dbEmployees.Scan(&id, &workplaceId, &name, &firstName, &preferredLocation, &availability, &active)
+		_ = dbEmployees.Scan(&id, &workplaceID, &name, &firstName, &preferredLocation, &availability, &active)
 		currentEmployee := &Employee{
-			ID:                workplaceId,
+			ID:                workplaceID,
 			Name:              name,
 			FirstName:         firstName,
 			PreferredLocation: OfficeGroup(preferredLocation),
@@ -117,23 +118,23 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 			Active:            active != 0,
 			Oldie:             true,
 		}
-		log.Printf("[STORAGE] Fetching all previous matches from employee with id %d (%s)", id, workplaceId)
+		log.Printf("[STORAGE] Fetching all previous matches from employee with id %d (%s)", id, workplaceID)
 		dbMatchesForEmployee, err := s.Connection.Query("SELECT match1_id, match2_id, created_at, happened FROM matches WHERE match1_id = ? OR match2_id = ?", id, id)
 		if err != nil {
 			log.Printf("[DATABASE ERROR] %v", err)
 		}
 		var matches Matches
 		for dbMatchesForEmployee.Next() {
-			var match1Id int
-			var match2Id int
+			var match1ID int
+			var match2ID int
 			var createdAt string
 			var happened MatchStatus
-			_ = dbMatchesForEmployee.Scan(&match1Id, &match2Id, &createdAt, &happened)
-			colleagueId := match1Id
-			if id == match1Id {
-				colleagueId = match2Id
+			_ = dbMatchesForEmployee.Scan(&match1ID, &match2ID, &createdAt, &happened)
+			colleagueID := match1ID
+			if id == match1ID {
+				colleagueID = match2ID
 			}
-			colleague := s.GetEmployee(colleagueId)
+			colleague := s.GetEmployee(colleagueID)
 
 			pair := []*Employee{currentEmployee, colleague}
 			matchedTime, _ := time.Parse(time.RFC3339, createdAt)
@@ -145,7 +146,7 @@ func (s *Storage) GetAllEmployees() map[string]*Employee {
 			matches = append(matches, match)
 		}
 		currentEmployee.Matches = matches
-		employees[workplaceId] = currentEmployee
+		employees[workplaceID] = currentEmployee
 	}
 	return employees
 }
@@ -156,7 +157,7 @@ func (s *Storage) SaveMatch(match *Match) {
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}
-	_, err = stmt.Exec(s.GetEmployeeId(match.Pair[0].ID), s.GetEmployeeId(match.Pair[1].ID), match.Time.Format(time.RFC3339), match.Happened)
+	_, err = stmt.Exec(s.GetEmployeeID(match.Pair[0].ID), s.GetEmployeeID(match.Pair[1].ID), match.Time.Format(time.RFC3339), match.Happened)
 	if err != nil {
 		log.Printf("[DATABASE ERROR] %v", err)
 	}

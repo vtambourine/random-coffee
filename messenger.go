@@ -188,11 +188,10 @@ func (m *Messenger) Send(message Messaging) {
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
-
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 }
 
 func (m *Messenger) SendMessage(messaging Messaging) {
@@ -224,11 +223,10 @@ func (m *Messenger) GetMember(id string) Member {
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
-
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	member := new(Member)
 	err = json.NewDecoder(resp.Body).Decode(member)

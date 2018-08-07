@@ -44,11 +44,12 @@ func (r *Roster) SetAvailabilityAll(a Availability) {
 
 func (r *Roster) GetByID(id string) (*Employee, bool) {
 	e, ok := r.Employees[id]
+
 	if ok {
 		return e, true
-	} else {
-		return nil, false
 	}
+
+	return nil, false
 }
 
 func (r *Roster) GetMatches() [][]*Employee {

@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/natefinch/lumberjack"
-	"github.com/robfig/cron"
 	"log"
 	"math/rand"
 	"os"
+
+	"github.com/natefinch/lumberjack"
+	"github.com/robfig/cron"
 )
 
 var scheduler chan string
@@ -304,11 +305,11 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 					})
 				}
 			case "CHECK_AVAILABILITY":
-				var availability_status string
+				var availabilityStatus string
 				if employee.Availability == Available {
-					availability_status = "available"
+					availabilityStatus = "available"
 				} else {
-					availability_status = "not available"
+					availabilityStatus = "not available"
 				}
 				messenger.SendMessage(Messaging{
 					MessagingType: "UPDATE",
@@ -316,7 +317,7 @@ func processMessage(m Messaging, messenger *Messenger, roster *Roster, db *Stora
 						ID: employee.ID,
 					},
 					Message: &Message{
-						Text: fmt.Sprintf("It seems that you are %s today. Do you want to change it?", availability_status),
+						Text: fmt.Sprintf("It seems that you are %s today. Do you want to change it?", availabilityStatus),
 						QuickReplies: &[]QuickReply{
 							{
 								ContentType: "text",
